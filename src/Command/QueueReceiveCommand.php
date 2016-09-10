@@ -73,27 +73,28 @@ class QueueReceiveCommand extends Command implements ContainerAwareInterface
     {
         $this->output = $output;
         $registry = $this->container->get('uecode_qpush');
-
         $name = $input->getArgument('name');
+        if (null !== $name) {
+            return $this->pollQueue($registry, $name);
+        }
+        foreach ($registry->all() as $queue) {
+            $this->pollQueue($registry, $queue->getName());
+        }
+        return 0;
+    }
 
-        if ($name !== null && !$registry->has($name)) {
+    private function pollQueue($registry, $name)
+    {
+        if (!$registry->has($name)) {
             return $this->output->writeln(
-                sprintf("The [%s] queue you have specified does not exists!", $name)
+                            sprintf("The [%s] queue you have specified does not exists!", $name)
             );
         }
         
-        if ($name !== null) {
-            $queues = $registry->get($name);      
-        } else {
-            $queues = $registry->all();
-        }
+        $count = $registry->get($name)->poll();
         
-        foreach ((array) $queues as $queue) {
-            $count = $queue->pollQueue();
-            $msg = "<info>Finished polling %s Queue, %d messages fetched.</info>";
-            $this->output->writeln(sprintf($msg, $queue->getName(), $count));
-        }
-
+        $msg = "<info>Finished polling %s Queue, %d messages fetched.</info>";
+        $this->output->writeln(sprintf($msg, $name, $count));
         return 0;
     }
 

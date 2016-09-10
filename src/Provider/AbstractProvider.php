@@ -33,6 +33,7 @@ use Uecode\Bundle\QPushBundle\Event\NotificationEvent;
  */
 abstract class AbstractProvider implements ProviderInterface
 {
+
     /**
      * QPush Queue Name
      *
@@ -115,7 +116,7 @@ abstract class AbstractProvider implements ProviderInterface
         }
 
         // Add the queue name and provider to the context
-        $context = array_merge(['queue' => $this->name, 'provider'  => $this->getProvider()], $context);
+        $context = array_merge(['queue' => $this->name, 'provider' => $this->getProvider()], $context);
 
         return $this->logger->addRecord($level, $message, $context);
     }
@@ -151,11 +152,11 @@ abstract class AbstractProvider implements ProviderInterface
     {
         return array_merge($this->options, array_intersect_key($options, $this->options));
     }
-    
-     public function pollQueue()
+
+    public function poll()
     {
         $dispatcher = $this->container->get('event_dispatcher');
-        $messages   = $this->receive();
+        $messages = $this->receive();
 
         foreach ($messages as $message) {
             $messageEvent = new MessageEvent($this->name, $message);
