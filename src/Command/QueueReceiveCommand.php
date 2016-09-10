@@ -36,6 +36,7 @@ use Uecode\Bundle\QPushBundle\Event\MessageEvent;
  */
 class QueueReceiveCommand extends Command implements ContainerAwareInterface
 {
+
     /**
      * @var ContainerInterface
      *
@@ -60,14 +61,11 @@ class QueueReceiveCommand extends Command implements ContainerAwareInterface
     protected function configure()
     {
         $this
-            ->setName('uecode:qpush:receive')
-            ->setDescription('Polls the configured Queues')
-            ->addArgument(
-                'name',
-                InputArgument::OPTIONAL,
-                'Name of a specific queue to poll',
-                null
-            )
+                ->setName('uecode:qpush:receive')
+                ->setDescription('Polls the configured Queues')
+                ->addArgument(
+                        'name', InputArgument::OPTIONAL, 'Name of a specific queue to poll', null
+                )
         ;
     }
 
@@ -78,36 +76,25 @@ class QueueReceiveCommand extends Command implements ContainerAwareInterface
 
         $name = $input->getArgument('name');
 
-        if (null !== $name) {
-            return $this->pollQueue($registry, $name);
-        }
-
-        foreach ($registry->all() as $queue) {
-            $this->pollQueue($registry, $queue->getName());
-        }
-
-        return 0;
-    }
-
-    private function pollQueue($registry, $name)
-    {
-        if (!$registry->has($name)) {
+        if ($name !== null && !$registry->has($name)) {
             return $this->output->writeln(
                 sprintf("The [%s] queue you have specified does not exists!", $name)
             );
         }
-
-        $dispatcher = $this->container->get('event_dispatcher');
-        $messages   = $registry->get($name)->receive();
-
-        foreach ($messages as $message) {
-            $messageEvent = new MessageEvent($name, $message);
-            $dispatcher->dispatch(Events::Message($name), $messageEvent);
+        
+        if ($name !== null) {
+            $queues = $registry->get($name);      
+        } else {
+            $queues = $registry->all();
         }
-
-        $msg = "<info>Finished polling %s Queue, %d messages fetched.</info>";
-        $this->output->writeln(sprintf($msg, $name, sizeof($messages)));
+        
+        foreach ((array) $queues as $queue) {
+            $count = $queue->pollQueue();
+            $msg = "<info>Finished polling %s Queue, %d messages fetched.</info>";
+            $this->output->writeln(sprintf($msg, $queue->getName(), $count));
+        }
 
         return 0;
     }
+
 }

@@ -151,6 +151,19 @@ abstract class AbstractProvider implements ProviderInterface
     {
         return array_merge($this->options, array_intersect_key($options, $this->options));
     }
+    
+     public function pollQueue()
+    {
+        $dispatcher = $this->container->get('event_dispatcher');
+        $messages   = $this->receive();
+
+        foreach ($messages as $message) {
+            $messageEvent = new MessageEvent($this->name, $message);
+            $dispatcher->dispatch(Events::Message($this->name), $messageEvent);
+        }
+
+        return sizeof($messages);
+    }
 
     abstract public function getProvider();
 
