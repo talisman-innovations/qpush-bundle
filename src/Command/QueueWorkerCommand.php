@@ -63,7 +63,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
          }
          
         if ($name  !== null ) {
-            $queues[] = $this->bindQueue($registry, $name, $socket);        
+            $queues[] = $registry->get($name);      
         } else {
             $queues = $registry->all();
         }
@@ -89,6 +89,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
     private function bindQueue($queue, $socket)
     {
         $options = $queue->getOptions();
+        $this->logger->debug('0MQ options ', $options);
         if (array_key_exists('zeromq_socket', $options)) {
             $this->logger->debug('0MQ binding to ', $options['zeromq_socket']);
             $socket->bind($options['zeromq_socket']);

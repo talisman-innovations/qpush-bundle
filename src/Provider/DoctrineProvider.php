@@ -54,8 +54,10 @@ class DoctrineProvider extends AbstractProvider
         $this->logger = $logger;
         $this->em = $client;
         $this->repository = $this->em->getRepository(self::$entityName);
+        $this->logger->debug('Zero MQ options', $options);
         if (array_key_exists('zeromq_socket', $options)) {
             $this->context = new \ZMQContext();
+            $this->logger->debug('Zero MQ context setup');
         }
     }
 
