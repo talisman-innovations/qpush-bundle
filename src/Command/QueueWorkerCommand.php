@@ -49,7 +49,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
 
         $context = new \ZMQContext();
         $this->logger->debug('0MQ context setup');
-        $socket = new \ZMQSocket($context, ZMQ::SOCKET_PULL);
+        $socket = new \ZMQSocket($context, \ZMQ::SOCKET_PULL);
         $this->logger->debug('0MQ socket setup');
 
         $registry = $this->container->get('uecode_qpush');

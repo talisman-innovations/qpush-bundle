@@ -127,7 +127,7 @@ class DoctrineProvider extends AbstractProvider
             $this->logger->debug('Preparing to send 0MQ message');
             if (!$this->sender) {
                 $this->logger->debug('Preparing to create 0MQ socket');
-                $this->sender = new \ZMQSocket($this->context, ZMQ::SOCKET_PUSH);
+                $this->sender = new \ZMQSocket($this->context, \ZMQ::SOCKET_PUSH);
                 $this->sender->connect($this->options['zeromq_socket']);
             }
             $notification = sprintf('%s %d', $this->name, $id);
