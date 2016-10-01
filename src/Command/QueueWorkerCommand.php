@@ -19,7 +19,7 @@ use Psr\Log\LoggerInterface;
 /**
  * @author Steven Brookes <steven.brookes@talisman-innovations.com>
  */
-class QueueReceiveCommand extends Command implements ContainerAwareInterface
+class QueueWorkerCommand extends Command implements ContainerAwareInterface
 {
 
     protected $container;
