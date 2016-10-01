@@ -75,7 +75,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
         $this->logger->debug('0MQ ready to receive');
         while (true) {
             $notification = $socket->recv();
-            $this->logger->debug('0MQ notification received', $notification);
+            $this->logger->debug('0MQ notification received', [$notification]);
 
             if (sscanf($notification, '%s %d', $name, $id) != 2) {
                 continue;
@@ -91,7 +91,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
         $options = $queue->getOptions();
         $this->logger->debug('0MQ options ', $options);
         if (array_key_exists('zeromq_socket', $options)) {
-            $this->logger->debug('0MQ binding to ', $options['zeromq_socket']);
+            $this->logger->debug('0MQ binding to ', [$options['zeromq_socket']]);
             $socket->bind($options['zeromq_socket']);
         }
        

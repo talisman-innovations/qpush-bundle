@@ -134,7 +134,7 @@ class DoctrineProvider extends AbstractProvider
             }
             $notification = sprintf('%s %d', $this->name, $id);
             $this->sender->send($notification);
-            $this->logger->debug('Completed 0MQ message', $notification);
+            $this->logger->debug('Completed 0MQ message', [$notification]);
         }
 
         return (string) $id;
