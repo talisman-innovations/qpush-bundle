@@ -91,6 +91,7 @@ class UecodeQPushExtension extends Extension
                 case 'doctrine':
                     $class = $container->getParameter('uecode_qpush.provider.doctrine');
                     $client = $this->createDoctrineClient($config['providers'][$provider]);
+                    $values['options']['zeromq_socket'] =  $config['providers'][$provider]['zeromq_socket'];
                     break;
             }
 

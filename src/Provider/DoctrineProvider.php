@@ -32,6 +32,9 @@ class DoctrineProvider extends AbstractProvider
 
     protected $em;
     protected $repository;
+    protected $context;
+    protected $sender;
+    protected $receiver;
     protected static $entityName = 'Uecode\Bundle\QPushBundle\Entity\DoctrineMessage';
 
     /**
@@ -51,16 +54,9 @@ class DoctrineProvider extends AbstractProvider
         $this->logger = $logger;
         $this->em = $client;
         $this->repository = $this->em->getRepository(self::$entityName);
-    }
-
-    /**
-     * Returns the name of the Queue that this Provider is for
-     *
-     * @return string
-     */
-    public function getName()
-    {
-        return $this->name;
+        if ($options['zeromq_socket']) {
+            $this->context = new ZMQContext();
+        }
     }
 
     /**
@@ -74,36 +70,6 @@ class DoctrineProvider extends AbstractProvider
     }
 
     /**
-     * Returns the Provider's Configuration Options
-     *
-     * @return array
-     */
-    public function getOptions()
-    {
-        return $this->options;
-    }
-
-    /**
-     * Returns the Cache service
-     *
-     * @return Cache
-     */
-    public function getCache()
-    {
-        return $this->cache;
-    }
-
-    /**
-     * Returns the Logger service
-     *
-     * @return Logger
-     */
-    public function getLogger()
-    {
-        return $this->logger;
-    }
-
-    /**
      * Get repository
      * 
      * @return array
@@ -113,7 +79,7 @@ class DoctrineProvider extends AbstractProvider
         if (!$this->repository) {
             return;
         }
-        
+
         return $this->repository;
     }
 
@@ -127,7 +93,7 @@ class DoctrineProvider extends AbstractProvider
     {
         $sm = $this->em->getConnection()->getSchemaManager();
         $table = $this->em->getClassMetadata(self::$entityName)->getTableName();
-        
+
         return $sm->tablesExist(array($table));
     }
 
@@ -155,8 +121,21 @@ class DoctrineProvider extends AbstractProvider
 
         $this->em->persist($doctrineMessage);
         $this->em->flush();
+        $id = $doctrineMessage->getId();
 
-        return (string) $doctrineMessage->getId();
+        if ($this->context) {
+            $this->logger->debug('Preparing to send 0MQ message');
+            if (!$this->sender) {
+                $this->logger->debug('Preparing to create 0MQ socket');
+                $this->sender = new ZMQSocket($this->context, ZMQ::SOCKET_PUSH);
+                $this->sender->connect($this->options['zeromq_socket']);
+            }
+            $notification = sprintf('%s %d', $this->name, $id);
+            $this->sender->send($notification);
+            $this->logger->debug('Completed 0MQ message', $notification);
+        }
+
+        return (string) $id;
     }
 
     /**
@@ -178,8 +157,7 @@ class DoctrineProvider extends AbstractProvider
         }
 
         $doctrineMessages = $this->repository->findBy(
-                array('delivered' => false, 'queue' => $this->name),
-                array('id' => 'ASC')
+                array('delivered' => false, 'queue' => $this->name), array('id' => 'ASC')
         );
 
         $messages = [];
@@ -202,7 +180,7 @@ class DoctrineProvider extends AbstractProvider
         $doctrineMessage = $this->repository->findById($id);
         $doctrineMessage->setDelivered(true);
         $this->em->flush();
-        
+
         return true;
     }
 
@@ -218,7 +196,7 @@ class DoctrineProvider extends AbstractProvider
         $qb->where('dm.queue = :queue');
         $qb->setParameter('queue', $this->name);
         $qb->getQuery()->execute();
-        
+
         return true;
     }
 
@@ -269,4 +247,5 @@ class DoctrineProvider extends AbstractProvider
 
         return $qb->getQuery();
     }
+
 }
