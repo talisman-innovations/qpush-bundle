@@ -32,9 +32,6 @@ class DoctrineProvider extends AbstractProvider
 
     protected $em;
     protected $repository;
-    protected $context;
-    protected $sender;
-    protected $receiver;
     protected static $entityName = 'Uecode\Bundle\QPushBundle\Entity\DoctrineMessage';
 
     /**
@@ -54,11 +51,6 @@ class DoctrineProvider extends AbstractProvider
         $this->logger = $logger;
         $this->em = $client;
         $this->repository = $this->em->getRepository(self::$entityName);
-        $this->logger->debug('Zero MQ options', $options);
-        if (array_key_exists('zeromq_socket', $options)) {
-            $this->context = new \ZMQContext();
-            $this->logger->debug('Zero MQ context setup');
-        }
     }
 
     /**
@@ -125,15 +117,17 @@ class DoctrineProvider extends AbstractProvider
         $this->em->flush();
         $id = $doctrineMessage->getId();
 
-        if ($this->context) {
+        if (array_key_exists('zeromq_socket', $this->options)) {
             $this->logger->debug('Preparing to send 0MQ message');
-            if (!$this->sender) {
-                $this->logger->debug('Preparing to create 0MQ socket');
-                $this->sender = new \ZMQSocket($this->context, \ZMQ::SOCKET_PUSH);
-                $this->sender->connect($this->options['zeromq_socket']);
-            }
+            $context = new \ZMQContext();
+            $this->logger->debug('Zero MQ context setup');
+
+            $this->logger->debug('Preparing to create 0MQ socket');
+            $sender = new \ZMQSocket($context, \ZMQ::SOCKET_PUSH);
+            $sender->connect($this->options['zeromq_socket']);
+
             $notification = sprintf('%s %d', $this->name, $id);
-            $this->sender->send($notification);
+            $sender->send($notification);
             $this->logger->debug('Completed 0MQ message', [$notification]);
         }
 
