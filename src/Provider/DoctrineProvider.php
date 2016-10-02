@@ -134,7 +134,7 @@ class DoctrineProvider extends AbstractProvider
      */
     protected function notify($endpoint, $name, $id)
     {
-        if (!class_exists(\ZMQ)) {
+        if (!class_exists('\ZMQ')) {
             return;
         }
         
