@@ -118,20 +118,33 @@ class DoctrineProvider extends AbstractProvider
         $id = $doctrineMessage->getId();
 
         if (array_key_exists('zeromq_socket', $this->options)) {
-            $this->logger->debug('Preparing to send 0MQ message');
-            $context = new \ZMQContext();
-            $this->logger->debug('Zero MQ context setup');
-
-            $this->logger->debug('Preparing to create 0MQ socket');
-            $sender = new \ZMQSocket($context, \ZMQ::SOCKET_PUSH);
-            $sender->connect($this->options['zeromq_socket']);
-
-            $notification = sprintf('%s %d', $this->name, $id);
-            $sender->send($notification);
-            $this->logger->debug('Completed 0MQ message', [$notification]);
+            $this->notify($this->options['zeromq_socket'], $this->name, $id);
         }
 
         return (string) $id;
+    }
+
+    /**
+     * Notifies a Queue worker uding ZeroMQ
+     *
+     *
+     * @param string $endpoint The ZeroMQ endpoint to send to
+     * @param string $name The name of the queue
+     * @param integer $id  The ID os the message
+     */
+    protected function notify($endpoint, $name, $id)
+    {
+        if (!class_exists(\ZMQ)) {
+            return;
+        }
+        
+        $context = new \ZMQContext();
+        $sender = new \ZMQSocket($context, \ZMQ::SOCKET_PUSH);
+        $sender->connect($endpoint);
+
+        $notification = sprintf('%s %d', $name, $id);
+        $sender->send($notification);
+        $this->logger->debug('Completed 0MQ message', [$notification]);
     }
 
     /**
