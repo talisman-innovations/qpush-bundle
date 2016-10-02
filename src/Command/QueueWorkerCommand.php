@@ -24,6 +24,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
 
     protected $container;
     protected $logger;
+    protected $output;
 
     public function setContainer(ContainerInterface $container = null)
     {
@@ -43,19 +44,14 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
 
     protected function execute(InputInterface $input, OutputInterface $output)
     {
+        $this->output = $output;
         $this->logger = $this->container->get('logger');
-
-        $context = new \ZMQContext();
-        $this->logger->debug('0MQ context setup');
-        $socket = new \ZMQSocket($context, \ZMQ::SOCKET_PULL);
-        $this->logger->debug('0MQ socket setup');
-
         $registry = $this->container->get('uecode_qpush');
         $name = $input->getArgument('name');
 
         if ($name !== null && !$registry->has($name)) {
-            return $output->writeln(
-                            sprintf("The [%s] queue you have specified does not exist!", $name));
+            $msg = sprintf("The [%s] queue you have specified does not exist!", $name);
+            return $output->writeln($msg);
         }
 
         if ($name !== null) {
@@ -64,28 +60,40 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
             $queues = $registry->all();
         }
 
+        $context = new \ZMQContext();
+        $socket = new \ZMQSocket($context, \ZMQ::SOCKET_PULL);
+        $socket->setSockOpt(\ZMQ::SOCKOPT_RCVTIMEO, 60);
+
         $binds = 0;
         foreach ($queues as $queue) {
             $binds += $this->bindQueue($queue, $socket);
         }
 
         $this->logger->debug('0MQ ready to receive');
-        while ($binds) {
+        while (true) {
             $notification = $socket->recv();
-            $this->logger->debug('0MQ notification received', [$notification]);
 
-            if (sscanf($notification, '%s %d', $name, $id) != 2) {
-                continue;
+            if ($notification) {
+                $this->logger->debug('0MQ notification received', [$notification]);
+
+                if (sscanf($notification, '%s %d', $name, $id) != 2) {
+                    continue;
+                }
+
+                if (!$registry->has($name)) {
+                    $this->logger->debug('0MQ no such queue', [$name]);
+                    continue;
+                }
+
+                $this->pollQueue($registry, $name);
+            } else {
+                foreach ($registry->all() as $queue) {
+                    $this->pollQueue($registry, $queue->getName());
+                }
             }
-            $messages = $registry->get($name)->receive();
-            $msg = sprintf('Received notification for %s Queue, %d messages fetched', 
-                    $name, sizeof($messages));
-            $this->logger->debug($msg);
-            $output->writeln($msg);
         }
 
-        $output->writeln('No 0MQ sockets to bind to');
-        return 1;
+        return 0;
     }
 
     private function bindQueue($queue, $socket)
@@ -94,11 +102,28 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
         if (!array_key_exists('zeromq_socket', $options)) {
             return 0;
         }
-        
+
         $this->logger->debug('0MQ binding to ', [$options['zeromq_socket']]);
         $socket->bind($options['zeromq_socket']);
 
         return 1;
+    }
+
+    private function pollQueue($registry, $name)
+    {
+        $dispatcher = $this->container->get('event_dispatcher');
+        $messages = $registry->get($name)->receive();
+
+        foreach ($messages as $message) {
+            $messageEvent = new MessageEvent($name, $message);
+            $dispatcher->dispatch(Events::Message($name), $messageEvent);
+        }
+
+        $msg = sprintf('Polling Queue %s, %d messages fetched', $name, sizeof($messages));
+        $this->logger->debug($msg);
+        $this->output->writeln($msg);
+
+        return sizeof($messages);
     }
 
 }
