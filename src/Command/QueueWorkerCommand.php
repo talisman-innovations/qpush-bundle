@@ -62,7 +62,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
 
         $context = new \ZMQContext();
         $socket = new \ZMQSocket($context, \ZMQ::SOCKET_PULL);
-        $socket->setSockOpt(\ZMQ::SOCKOPT_RCVTIMEO, 60);
+        $socket->setSockOpt(\ZMQ::SOCKOPT_RCVTIMEO, 60000);
 
         $binds = 0;
         foreach ($queues as $queue) {
