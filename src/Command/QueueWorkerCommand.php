@@ -37,7 +37,13 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
                 ->setName('uecode:qpush:worker')
                 ->setDescription('Worker process to poll the configured queues')
                 ->addArgument(
-                        'name', InputArgument::OPTIONAL, 'Name of a specific queue to poll', null
+                        'name', InputArgument::OPTIONAL, 'Name of a specific queue to poll'
+                )
+                ->addOption(
+                        'time', 't', InputOption::VALUE_OPTIONAL, 'Time to run before exit (seconds)'
+                )
+                ->addOption(
+                        'check', 'c', InputOption::VALUE_OPTIONAL, 'Check all queues every (seconds)'
                 )
         ;
     }
@@ -48,6 +54,8 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
         $this->logger = $this->container->get('logger');
         $registry = $this->container->get('uecode_qpush');
         $name = $input->getArgument('name');
+        $time = ($input->getOption('time') === null) ? PHP_INT_MAX : time() + $input->getOption('time');
+        $check = ($input->getOption('check') === null) ? 60000 : $input->getOption('time') * 1000;
 
         if ($name !== null && !$registry->has($name)) {
             $msg = sprintf("The [%s] queue you have specified does not exist!", $name);
@@ -62,7 +70,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
 
         $context = new \ZMQContext();
         $socket = new \ZMQSocket($context, \ZMQ::SOCKET_PULL);
-        $socket->setSockOpt(\ZMQ::SOCKOPT_RCVTIMEO, 60000);
+        $socket->setSockOpt(\ZMQ::SOCKOPT_RCVTIMEO, $check);
 
         $binds = 0;
         foreach ($queues as $queue) {
@@ -70,7 +78,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
         }
 
         $this->logger->debug('0MQ ready to receive');
-        while (true) {
+        while (time() < $time) {
             $notification = $socket->recv();
 
             if ($notification) {
