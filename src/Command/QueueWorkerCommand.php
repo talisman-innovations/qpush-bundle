@@ -91,6 +91,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
                     $this->pollQueue($registry, $queue->getName());
                 }
             }
+            gc_collect_cycles();
         }
 
         return 0;
