@@ -221,37 +221,35 @@ class DoctrineProvider extends AbstractProvider
         return $this->repository->find($id);
     }
 
-    /*
+    /**
      * Returns a query of the message queue
      * 
-     * @param string $contains
-     * @param DateTime $from
-     * @param DateTime $to
-     * 
+     * @param array $data ['field'=>'id', 'search'=>'text', 'to'=>date, from=>date]
      * @return Query
+     * 
      */
-
-    public function findBy($contains = null, $from = null, $to = null)
+    public function findBy($data)
     {
-
         $qb = $this->repository->createQueryBuilder('p');
         $qb->select('p');
         $qb->where('p.queue = :queue');
         $qb->setParameter('queue', $this->name);
 
-        if ($contains !== null) {
-            $qb->andWhere('p.message LIKE :contains');
-            $qb->setParameter('contains', '%' . $contains . '%');
+        $field = (isset($data['field']))?$data['field']:'message';
+        
+        if (isset($data['search']) && $data['search'] !== null) {
+            $qb->andWhere('p.'.$field.' LIKE :contains');
+            $qb->setParameter('contains', '%' . $data['search'] . '%');
         }
 
-        if ($from !== null) {
+        if (isset($data['from']) && $data['from'] !== null) {
             $qb->andWhere('p.created >= :from');
-            $qb->setParameter('from', $from);
+            $qb->setParameter('from', $data['from']);
         }
 
-        if ($to !== null) {
+        if (isset($data['to']) && $data['to'] !== null) {
             $qb->andWhere('p.created <= :to');
-            $qb->setParameter('to', $to);
+            $qb->setParameter('to', $data['to']);
         }
 
         return $qb->getQuery();
