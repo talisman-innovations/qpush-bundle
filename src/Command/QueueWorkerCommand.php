@@ -56,7 +56,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface
         $registry = $this->container->get('uecode_qpush');
         $name = $input->getArgument('name');
         $time = ($input->getOption('time') === null) ? PHP_INT_MAX : time() + $input->getOption('time');
-        $check = ($input->getOption('check') === null) ? 60000 : $input->getOption('time') * 1000;
+        $check = ($input->getOption('check') === null) ? 60000 : $input->getOption('check') * 1000;
 
         if ($name !== null && !$registry->has($name)) {
             $msg = sprintf("The [%s] queue you have specified does not exist!", $name);
