@@ -30,6 +30,8 @@ use Uecode\Bundle\QPushBundle\Entity\DoctrineMessage;
 class DoctrineProvider extends AbstractProvider
 {
 
+    const DEFAULT_PERIOD = 300;
+
     protected $em;
     protected $repository;
     protected static $entityName = 'Uecode\Bundle\QPushBundle\Entity\DoctrineMessage';
@@ -235,10 +237,10 @@ class DoctrineProvider extends AbstractProvider
         $qb->where('p.queue = :queue');
         $qb->setParameter('queue', $this->name);
 
-        $field = (isset($data['field']))?$data['field']:'message';
-        
+        $field = (isset($data['field'])) ? $data['field'] : 'message';
+
         if (isset($data['search']) && $data['search'] !== null) {
-            $qb->andWhere('p.'.$field.' LIKE :contains');
+            $qb->andWhere('p.' . $field . ' LIKE :contains');
             $qb->setParameter('contains', '%' . $data['search'] . '%');
         }
 
@@ -253,6 +255,39 @@ class DoctrineProvider extends AbstractProvider
         }
 
         return $qb->getQuery();
+    }
+
+    /*
+     * Returns an array of times and messgae counts
+     * @praram $data ['from' => date, 'to' => date, 'period' => seconds
+     * @return ['time', 'count']
+     */
+
+    public function counts($data=null)
+    {
+        if (isset($data['period']) && $data['period'] !== null) {
+            $period = $data['period'];
+        } else {
+            $period = self::DEFAULT_PERIOD;
+        }
+        $sql = 'SELECT from_unixtime(floor(unix_timestamp(created)/'
+                . $period . ') * ' . $period . ') as time, 
+            count(*) as count 
+            FROM uecode_qpush_message
+            where queue = "' . $this->name . '"';
+        if (isset($data['from']) && $data['from'] !== null) {
+            $sql = $sql . ' and created >= "' . $data['from'] . '"';
+        }
+        if (isset($data['to']) && $data['to'] !== null) {
+            $sql = $sql . ' and created <= "' . $data['to'] . '"';
+        }
+        $sql = $sql . ' group by floor(unix_timestamp(created)/' . $period . ')';
+        $sql = $sql . ' order by floor(unix_timestamp(created)/' . $period . ') ASC';
+        $statement = $this->em->getConnection()->prepare($sql);
+        $statement->execute();
+        $results = $statement->fetchAll();
+        
+        return $results;
     }
 
 }
