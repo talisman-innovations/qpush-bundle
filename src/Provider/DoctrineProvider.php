@@ -281,8 +281,7 @@ class DoctrineProvider extends AbstractProvider
         if (isset($data['to']) && $data['to'] !== null) {
             $sql = $sql . ' and created <= "' . $data['to'] . '"';
         }
-        $sql = $sql . ' group by floor(unix_timestamp(created)/' . $period . ')';
-        $sql = $sql . ' order by floor(unix_timestamp(created)/' . $period . ') ASC';
+        $sql = $sql . ' group by time  order by time ASC';
         $statement = $this->em->getConnection()->prepare($sql);
         $statement->execute();
         $results = $statement->fetchAll();
