@@ -285,4 +285,40 @@ class DoctrineProvider extends AbstractProvider
         return $results;
     }
 
+    
+    /**
+     * Re deliver message to queue
+     * @param int $qid
+     * @return string
+     */
+    public function redeliver($qid)
+    {
+        if (!$this->em) {
+            return '';
+        }
+
+        $search = [];
+        $search['search'] = $qid;
+        $search['field'] = 'id';    
+        
+        $message = $this->findBy($search)->getResult();
+                
+        $doctrineMessage = new DoctrineMessage();
+        $doctrineMessage->setQueue($this->name)
+                ->setDelivered(false)
+                ->setMessage($message[0]->getMessage())
+                ->setLength(strlen(serialize($message[0]->getMessage())));
+
+        $this->em->persist($doctrineMessage);
+        $this->em->flush();
+        $id = $doctrineMessage->getId();
+
+        if (array_key_exists('zeromq_socket', $this->options)) {
+            $this->notify($this->options['zeromq_socket'], $this->name, $id);
+        }
+
+        return (string) $id;
+    }
+    
+    
 }
