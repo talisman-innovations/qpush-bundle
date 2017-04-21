@@ -10,11 +10,3 @@ services:
         class: Doctrine\Common\Cache\PhpFileCache
         arguments: ['%kernel.cache_dir%/qpush', qpush.php]
         public: false
-
-    ### QPush Event Listeners
-    uecode_qpush.request_listener:
-        class: '%uecode_qpush.request_listener.class%'
-        arguments:
-            - '@event_dispatcher'
-        tags:
-            - { name: kernel.event_listener, event: kernel.request, priority: 254 }
