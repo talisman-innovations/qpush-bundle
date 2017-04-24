@@ -291,7 +291,7 @@ class DoctrineProvider extends AbstractProvider
      * @param int $qid
      * @return string
      */
-    public function redeliver($qid)
+     public function redeliver($qid)
     {
         if (!$this->em) {
             return '';
@@ -302,23 +302,19 @@ class DoctrineProvider extends AbstractProvider
         $search['field'] = 'id';    
         
         $message = $this->findBy($search)->getResult();
-                
-        $doctrineMessage = new DoctrineMessage();
-        $doctrineMessage->setQueue($this->name)
-                ->setDelivered(false)
-                ->setMessage($message[0]->getMessage())
-                ->setLength(strlen(serialize($message[0]->getMessage())));
 
-        $this->em->persist($doctrineMessage);
+        $messages = new Message($message[0]->getId(), $message[0]->getMessage(), []);
+        $message[0]->setDelivered(false);
+
         $this->em->flush();
-        $id = $doctrineMessage->getId();
 
         if (array_key_exists('zeromq_socket', $this->options)) {
-            $this->notify($this->options['zeromq_socket'], $this->name, $id);
+            $this->notify($this->options['zeromq_socket'], $this->name, $qid);
         }
 
-        return (string) $id;
+        return (string) $qid;
     }
+    
     
     
 }
