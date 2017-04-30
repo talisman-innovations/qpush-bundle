@@ -32,56 +32,50 @@ use Symfony\Component\Config\FileLocator;
 /**
  * @author Keith Kirk <kkirk@undergroundelephant.com>
  */
-class UecodeQPushExtension extends Extension
-{
-    public function load(array $configs, ContainerBuilder $container)
-    {
+class UecodeQPushExtension extends Extension {
+
+    public function load(array $configs, ContainerBuilder $container) {
         $configuration = new Configuration();
         $config = $this->processConfiguration($configuration, $configs);
 
         $loader = new YamlFileLoader(
-            $container,
-            new FileLocator(__DIR__.'/../Resources/config')
+                $container, new FileLocator(__DIR__ . '/../Resources/config')
         );
 
         $loader->load('parameters.yml');
         $loader->load('services.yml');
 
         $registry = $container->getDefinition('uecode_qpush.registry');
-        $cache    = $config['cache_service'] ?: 'uecode_qpush.file_cache';
+        $cache = $config['cache_service'] ?: 'uecode_qpush.file_cache';
 
         foreach ($config['queues'] as $queue => $values) {
 
             // Adds logging property to queue options
             $values['options']['logging_enabled'] = $config['logging_enabled'];
 
-            $provider   = $values['provider'];
-            $class      = null;
-            $client     = null;
+            $provider = $values['provider'];
+            $class = null;
+            $client = null;
 
             switch ($config['providers'][$provider]['driver']) {
                 case 'aws':
-                    $class  = $container->getParameter('uecode_qpush.provider.aws');
+                    $class = $container->getParameter('uecode_qpush.provider.aws');
                     $client = $this->createAwsClient(
-                        $config['providers'][$provider],
-                        $container,
-                        $provider
+                            $config['providers'][$provider], $container, $provider
                     );
                     break;
                 case 'ironmq':
-                    $class  = $container->getParameter('uecode_qpush.provider.ironmq');
+                    $class = $container->getParameter('uecode_qpush.provider.ironmq');
                     $client = $this->createIronMQClient(
-                        $config['providers'][$provider],
-                        $container,
-                        $provider
+                            $config['providers'][$provider], $container, $provider
                     );
                     break;
                 case 'sync':
-                    $class  = $container->getParameter('uecode_qpush.provider.sync');
+                    $class = $container->getParameter('uecode_qpush.provider.sync');
                     $client = $this->createSyncClient();
                     break;
                 case 'custom':
-                    $class  = $container->getParameter('uecode_qpush.provider.custom');
+                    $class = $container->getParameter('uecode_qpush.provider.custom');
                     $client = $this->createCustomClient($config['providers'][$provider]['service']);
                     break;
                 case 'file':
@@ -91,44 +85,46 @@ class UecodeQPushExtension extends Extension
                 case 'doctrine':
                     $class = $container->getParameter('uecode_qpush.provider.doctrine');
                     $client = $this->createDoctrineClient($config['providers'][$provider]);
-                    if (array_key_exists('zeromq_socket', $config['providers'][$provider])) {
-                        $values['options']['zeromq_socket'] = $config['providers'][$provider]['zeromq_socket'];
+                    if (array_key_exists('zeromq_controller_socket', $config['providers'][$provider])) {
+                        $values['options']['zeromq_controller_socket'] = 
+                                $config['providers'][$provider]['zeromq_controller_socket'];
                     }
+                    if (array_key_exists('zeromq_worker_socket', $config['providers'][$provider])) {
+                        $values['options']['zeromq_worker_socket'] = 
+                                $config['providers'][$provider]['zeromq_worker_socket'];
+                    }
+
                     break;
             }
 
             $definition = new Definition(
-                $class, [$queue, $values['options'], $client, new Reference($cache), new Reference('logger')]
+                    $class, [$queue, $values['options'], $client, new Reference($cache), new Reference('logger')]
             );
 
             $definition->addTag('monolog.logger', ['channel' => 'qpush'])
-                ->addTag(
-                    'uecode_qpush.event_listener',
-                    [
+                    ->addTag(
+                            'uecode_qpush.event_listener', [
                         'event' => "{$queue}.on_notification",
                         'method' => "onNotification",
                         'priority' => 255
-                    ]
-                )
-                ->addTag(
-                    'uecode_qpush.event_listener',
-                    [
+                            ]
+                    )
+                    ->addTag(
+                            'uecode_qpush.event_listener', [
                         'event' => "{$queue}.message_received",
                         'method' => "onMessageReceived",
                         'priority' => -255
-                    ]
-                );
+                            ]
+            );
 
-            if (!empty($values['options']['queue_name'])
-                && $config['providers'][$provider]['driver'] == 'aws'
+            if (!empty($values['options']['queue_name']) && $config['providers'][$provider]['driver'] == 'aws'
             ) {
                 $definition->addTag(
-                    'uecode_qpush.event_listener',
-                    [
-                        'event' => "{$values['options']['queue_name']}.on_notification",
-                        'method' => "onNotification",
-                        'priority' => 255
-                    ]
+                        'uecode_qpush.event_listener', [
+                    'event' => "{$values['options']['queue_name']}.on_notification",
+                    'method' => "onNotification",
+                    'priority' => 255
+                        ]
                 );
             }
 
@@ -148,8 +144,7 @@ class UecodeQPushExtension extends Extension
      *
      * @return Reference
      */
-    private function createAwsClient($config, ContainerBuilder $container, $name)
-    {
+    private function createAwsClient($config, ContainerBuilder $container, $name) {
         $service = sprintf('uecode_qpush.provider.%s', $name);
 
         if (!$container->hasDefinition($service)) {
@@ -158,7 +153,7 @@ class UecodeQPushExtension extends Extension
             $aws3 = class_exists('Aws\Sdk');
             if (!$aws2 && !$aws3) {
                 throw new \RuntimeException(
-                    'You must require "aws/aws-sdk-php" to use the AWS provider.'
+                'You must require "aws/aws-sdk-php" to use the AWS provider.'
                 );
             }
 
@@ -175,26 +170,25 @@ class UecodeQPushExtension extends Extension
                 $aws->setFactory(['Aws\Common\Aws', 'factory']);
 
                 if (!empty($config['key']) && !empty($config['secret'])) {
-                    $awsConfig['key']    = $config['key'];
+                    $awsConfig['key'] = $config['key'];
                     $awsConfig['secret'] = $config['secret'];
                 }
-
             } else {
                 $aws = new Definition('Aws\Sdk');
 
                 if (!empty($config['key']) && !empty($config['secret'])) {
                     $awsConfig['credentials'] = [
-                        'key'    => $config['key'],
+                        'key' => $config['key'],
                         'secret' => $config['secret']
                     ];
                 }
-                $awsConfig['version']  = 'latest';
+                $awsConfig['version'] = 'latest';
             }
 
             $aws->setArguments([$awsConfig]);
 
             $container->setDefinition($service, $aws)
-                ->setPublic(false);
+                    ->setPublic(false);
         }
 
         return new Reference($service);
@@ -209,43 +203,40 @@ class UecodeQPushExtension extends Extension
      *
      * @return Reference
      */
-    private function createIronMQClient($config, ContainerBuilder $container, $name)
-    {
+    private function createIronMQClient($config, ContainerBuilder $container, $name) {
         $service = sprintf('uecode_qpush.provider.%s', $name);
 
         if (!$container->hasDefinition($service)) {
 
             if (!class_exists('IronMQ\IronMQ')) {
                 throw new \RuntimeException(
-                    'You must require "iron-io/iron_mq" to use the Iron MQ provider.'
+                'You must require "iron-io/iron_mq" to use the Iron MQ provider.'
                 );
             }
 
             $ironmq = new Definition('IronMQ\IronMQ');
             $ironmq->setArguments([
                 [
-                    'token'         => $config['token'],
-                    'project_id'    => $config['project_id'],
-                    'host'          => sprintf('%s.iron.io', $config['host']),
-                    'port'          => $config['port'],
-                    'api_version'   => $config['api_version']
+                    'token' => $config['token'],
+                    'project_id' => $config['project_id'],
+                    'host' => sprintf('%s.iron.io', $config['host']),
+                    'port' => $config['port'],
+                    'api_version' => $config['api_version']
                 ]
             ]);
 
             $container->setDefinition($service, $ironmq)
-                ->setPublic(false);
+                    ->setPublic(false);
         }
 
         return new Reference($service);
     }
 
-    private function createSyncClient()
-    {
+    private function createSyncClient() {
         return new Reference('event_dispatcher');
     }
-    
-    private function createDoctrineClient($config)
-    {
+
+    private function createDoctrineClient($config) {
         return new Reference($config['entity_manager']);
     }
 
@@ -254,8 +245,7 @@ class UecodeQPushExtension extends Extension
      *
      * @return Reference
      */
-    private function createCustomClient($serviceId)
-    {
+    private function createCustomClient($serviceId) {
         return new Reference($serviceId);
     }
 
@@ -264,8 +254,8 @@ class UecodeQPushExtension extends Extension
      *
      * @return string
      */
-    public function getAlias()
-    {
+    public function getAlias() {
         return 'uecode_qpush';
     }
+
 }

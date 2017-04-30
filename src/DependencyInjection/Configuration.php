@@ -103,7 +103,8 @@ class Configuration implements ConfigurationInterface
                     ->scalarNode('entity_manager')
                          ->defaultValue('doctrine.orm.default_entity_manager')
                     ->end()
-                    ->scalarNode('zeromq_socket')->end()     
+                    ->scalarNode('zeromq_controller_socket')->end()
+                    ->scalarNode('zeromq_worker _socket')->end()        
                 ->end()
 
                 ->validate()

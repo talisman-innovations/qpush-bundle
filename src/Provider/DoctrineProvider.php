@@ -119,22 +119,21 @@ class DoctrineProvider extends AbstractProvider
         $this->em->flush();
         $id = $doctrineMessage->getId();
 
-        if (array_key_exists('zeromq_socket', $this->options)) {
-            $this->notify($this->options['zeromq_socket'], $this->name, $id);
+        if (array_key_exists('zeromq_controller_socket', $this->options)) {
+            $this->push($this->options['zeromq_controller_socket'], $this->name, $id);
         }
 
         return (string) $id;
     }
 
     /**
-     * Notifies a Queue worker uding ZeroMQ
-     *
+     * Pushes a message to the controller using ZeroMQ
      *
      * @param string $endpoint The ZeroMQ endpoint to send to
      * @param string $name The name of the queue
      * @param integer $id  The ID os the message
      */
-    protected function notify($endpoint, $name, $id)
+    protected function push($endpoint, $name, $id)
     {
         if (!class_exists('\ZMQ')) {
             return;
