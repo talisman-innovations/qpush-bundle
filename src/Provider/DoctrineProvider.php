@@ -295,17 +295,10 @@ class DoctrineProvider extends AbstractProvider
     {
         if (!$this->em) {
             return '';
-        }
-
-        $search = [];
-        $search['search'] = $qid;
-        $search['field'] = 'id';    
+        }  
         
-        $message = $this->findBy($search)->getResult();
-
-        $messages = new Message($message[0]->getId(), $message[0]->getMessage(), []);
-        $message[0]->setDelivered(false);
-
+        $message = $this->repository->find($qid);
+        $message->setDelivered(false);
         $this->em->flush();
 
         if (array_key_exists('zeromq_socket', $this->options)) {
