@@ -27,8 +27,7 @@ use Monolog\Logger;
 use Uecode\Bundle\QPushBundle\Message\Message;
 use Uecode\Bundle\QPushBundle\Entity\DoctrineMessage;
 
-class DoctrineProvider extends AbstractProvider
-{
+class DoctrineProvider extends AbstractProvider {
 
     const DEFAULT_PERIOD = 300;
 
@@ -45,8 +44,7 @@ class DoctrineProvider extends AbstractProvider
      * @param Cache  $cache   An instance of Doctrine\Common\Cache\Cache
      * @param Logger $logger  An instance of Symfony\Bridge\Mongolog\Logger
      */
-    public function __construct($name, array $options, $client, Cache $cache, Logger $logger)
-    {
+    public function __construct($name, array $options, $client, Cache $cache, Logger $logger) {
         $this->name = $name;
         $this->options = $options;
         $this->cache = $cache;
@@ -60,8 +58,7 @@ class DoctrineProvider extends AbstractProvider
      *
      * @return string
      */
-    public function getProvider()
-    {
+    public function getProvider() {
         return 'Doctrine';
     }
 
@@ -70,8 +67,7 @@ class DoctrineProvider extends AbstractProvider
      * 
      * @return array
      */
-    public function getRepository()
-    {
+    public function getRepository() {
         if (!$this->repository) {
             return;
         }
@@ -85,8 +81,7 @@ class DoctrineProvider extends AbstractProvider
      * 
      * @return bool
      */
-    public function create()
-    {
+    public function create() {
         $sm = $this->em->getConnection()->getSchemaManager();
         $table = $this->em->getClassMetadata(self::$entityName)->getTableName();
 
@@ -103,8 +98,7 @@ class DoctrineProvider extends AbstractProvider
      *
      * @return string
      */
-    public function publish(array $message, array $options = [])
-    {
+    public function publish(array $message, array $options = []) {
         if (!$this->em) {
             return '';
         }
@@ -133,12 +127,11 @@ class DoctrineProvider extends AbstractProvider
      * @param string $name The name of the queue
      * @param integer $id  The ID os the message
      */
-    protected function push($endpoint, $name, $id)
-    {
+    protected function push($endpoint, $name, $id) {
         if (!class_exists('\ZMQ')) {
             return;
         }
-        
+
         $context = new \ZMQContext();
         $sender = new \ZMQSocket($context, \ZMQ::SOCKET_PUSH);
         $sender->connect($endpoint);
@@ -160,8 +153,7 @@ class DoctrineProvider extends AbstractProvider
      *
      * @return array
      */
-    public function receive(array $options = [])
-    {
+    public function receive(array $options = []) {
         if (!$this->em) {
             return [];
         }
@@ -180,13 +172,28 @@ class DoctrineProvider extends AbstractProvider
         return $messages;
     }
 
+    /*
+     * Receive a single message from the Queue
+     * 
+     * @param $id ID of the message to receieve
+     * 
+     * @return Message 
+     */
+
+    public function receiveOne($id) {
+        $doctrineMessage = $this->getById($id);
+        $message = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(), []);
+        $doctrineMessage->setDelivered(true);
+        $this->em->flush();
+        return $message;
+    }
+
     /**
      * Deletes the Queue Message
      *
      * @param mixed $id A message identifier or resource
      */
-    public function delete($id)
-    {
+    public function delete($id) {
         $doctrineMessage = $this->repository->findById($id);
         $doctrineMessage->setDelivered(true);
         $this->em->flush();
@@ -199,8 +206,7 @@ class DoctrineProvider extends AbstractProvider
      *
      * @return bool
      */
-    public function destroy()
-    {
+    public function destroy() {
         $qb = $this->repository->createQueryBuilder('dm');
         $qb->delete();
         $qb->where('dm.queue = :queue');
@@ -217,8 +223,7 @@ class DoctrineProvider extends AbstractProvider
      * 
      * @return Message
      */
-    public function getById($id)
-    {
+    public function getById($id) {
         return $this->repository->find($id);
     }
 
@@ -229,8 +234,7 @@ class DoctrineProvider extends AbstractProvider
      * @return Query
      * 
      */
-    public function findBy($data)
-    {
+    public function findBy($data) {
         $qb = $this->repository->createQueryBuilder('p');
         $qb->select('p');
         $qb->where('p.queue = :queue');
@@ -258,8 +262,7 @@ class DoctrineProvider extends AbstractProvider
      * @return ['time', 'count']
      */
 
-    public function counts($data=null)
-    {
+    public function counts($data = null) {
         if (isset($data['period']) && $data['period'] !== null) {
             $period = $data['period'];
         } else {
@@ -280,33 +283,29 @@ class DoctrineProvider extends AbstractProvider
         $statement = $this->em->getConnection()->prepare($sql);
         $statement->execute();
         $results = $statement->fetchAll();
-        
+
         return $results;
     }
 
-    
     /**
      * Re deliver message to queue
-     * @param int $qid
+     * @param int $id
      * @return string
      */
-     public function redeliver($qid)
-    {
+    public function redeliver($id) {
         if (!$this->em) {
             return '';
-        }  
-        
-        $message = $this->repository->find($qid);
+        }
+
+        $message = $this->repository->find($id);
         $message->setDelivered(false);
         $this->em->flush();
 
         if (array_key_exists('zeromq_socket', $this->options)) {
-            $this->notify($this->options['zeromq_socket'], $this->name, $qid);
+            $this->notify($this->options['zeromq_socket'], $this->name, $id);
         }
 
-        return (string) $qid;
+        return (string) $id;
     }
-    
-    
-    
+
 }
