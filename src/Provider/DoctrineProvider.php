@@ -181,6 +181,10 @@ class DoctrineProvider extends AbstractProvider {
      */
 
     public function receiveOne($id) {
+        if (!$this->em) {
+            return;
+        }
+        
         $doctrineMessage = $this->getById($id);
         $message = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(), []);
         $doctrineMessage->setDelivered(true);

@@ -23,6 +23,7 @@ use Psr\Log\LoggerInterface;
 class QueueControllerCommand extends Command implements ContainerAwareInterface {
 
     protected $container;
+    protected $registry;
     protected $logger;
     protected $output;
 
@@ -30,6 +31,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         $this->container = $container;
         $this->logger = $this->container->get('logger');
+        $this->registry = $this->container->get('uecode_qpush');
     }
 
     protected function configure() {
@@ -50,20 +52,20 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
     protected function execute(InputInterface $input, OutputInterface $output) {
         $this->output = $output;
-        $registry = $this->container->get('uecode_qpush');
+
         $name = $input->getArgument('name');
         $time = ($input->getOption('time') === null) ? PHP_INT_MAX : time() + $input->getOption('time');
         $check = ($input->getOption('check') === null) ? 60000 : $input->getOption('check') * 1000;
 
-        if ($name !== null && !$registry->has($name)) {
+        if ($name !== null && !$this->registry->has($name)) {
             $msg = sprintf("The [%s] queue you have specified does not exist!", $name);
             return $output->writeln($msg);
         }
 
         if ($name !== null) {
-            $queues[] = $registry->get($name);
+            $queues[] = $this->registry->get($name);
         } else {
-            $queues = $registry->all();
+            $queues = $this->registry->all();
         }
 
         $context = new \ZMQContext();
@@ -83,15 +85,15 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
                     continue;
                 }
 
-                if (!$registry->has($name)) {
+                if (!$this->registry->has($name)) {
                     $this->logger->debug('0MQ no such queue', [$name]);
                     continue;
                 }
 
-                $this->pollQueue($registry, $name);
+                $this->pollQueueOne($name, $id);
             } else {
-                foreach ($registry->all() as $queue) {
-                    $this->pollQueue($registry, $queue->getName());
+                foreach ($this->registry->all() as $queue) {
+                    $this->pollQueue($queue->getName());
                 }
             }
             gc_collect_cycles();
@@ -103,6 +105,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     /*
      * Bind to all the queues using ZeroMQ
      */
+
     private function bindQueues($queues, $socket) {
 
         foreach ($queues as $queue) {
@@ -116,19 +119,19 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         if (!isset($endpoints)) {
             return;
         }
-        
+
         $endpoints = array_unique($endpoints);
         foreach ($endpoints as $endpoint) {
             $this->logger->debug('0MQ binding to ' . $endpoint);
             $socket->bind($endpoint);
         }
-        
+
         return;
     }
 
-    private function pollQueue($registry, $name) {
+    private function pollQueue($name) {
         $dispatcher = $this->container->get('event_dispatcher');
-        $messages = $registry->get($name)->receive();
+        $messages = $this->registry->get($name)->receive();
 
         foreach ($messages as $message) {
             $messageEvent = new MessageEvent($name, $message);
@@ -140,6 +143,20 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $this->output->writeln($msg);
 
         return sizeof($messages);
+    }
+
+    private function pollQueueOne($name, $id) {
+        $dispatcher = $this->container->get('event_dispatcher');
+        $message = $this->registry->get($name)->receiveOne($id);
+
+        $messageEvent = new MessageEvent($name, $message);
+        $dispatcher->dispatch(Events::Message($name), $messageEvent);
+
+        $msg = sprintf('Polling Queue %s, message %d fetched', $name, $id);
+        $this->logger->debug($msg);
+        $this->output->writeln($msg);
+
+        return 1;
     }
 
 }
