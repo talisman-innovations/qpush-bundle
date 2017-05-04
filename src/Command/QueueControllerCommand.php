@@ -27,7 +27,9 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     protected $output;
 
     public function setContainer(ContainerInterface $container = null) {
+
         $this->container = $container;
+        $this->logger = $this->container->get('logger');
     }
 
     protected function configure() {
@@ -48,7 +50,6 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
     protected function execute(InputInterface $input, OutputInterface $output) {
         $this->output = $output;
-        $this->logger = $this->container->get('logger');
         $registry = $this->container->get('uecode_qpush');
         $name = $input->getArgument('name');
         $time = ($input->getOption('time') === null) ? PHP_INT_MAX : time() + $input->getOption('time');
@@ -66,96 +67,79 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         }
 
         $context = new \ZMQContext();
+        $socket = new \ZMQSocket($context, \ZMQ::SOCKET_PULL);
+        $socket->setSockOpt(\ZMQ::SOCKOPT_RCVTIMEO, $check);
 
-        $pullSocket = new \ZMQSocket($context, \ZMQ::SOCKET_PULL);
-        $pullSocket->setSockOpt(\ZMQ::SOCKOPT_RCVTIMEO, $check);
-        $this->bindPullSocket($queues, $pullSocket);
-
-        $routerSocket = new \ZMQSocket($context, \ZMQ::SOCKET_ROUTER);
-        $this->bindRouterSocket($queues, $routerSocket);
+        $this->bindQueues($queues, $socket);
 
         $this->logger->debug('0MQ ready to receive');
-
         while (time() < $time) {
-            $this->pull($pullSocket, $routerSocket);
+            $notification = $socket->recv();
+
+            if ($notification) {
+                $this->logger->debug('0MQ notification received', [$notification]);
+
+                if (sscanf($notification, '%s %d', $name, $id) != 2) {
+                    continue;
+                }
+
+                if (!$registry->has($name)) {
+                    $this->logger->debug('0MQ no such queue', [$name]);
+                    continue;
+                }
+
+                $this->pollQueue($registry, $name);
+            } else {
+                foreach ($registry->all() as $queue) {
+                    $this->pollQueue($registry, $queue->getName());
+                }
+            }
             gc_collect_cycles();
         }
 
-        $this->logger->debug('0MQ exiting');
         return 0;
     }
 
     /*
-     * Try to receive message from ZeroMQ or timeout and poll queue
+     * Bind to all the queues using ZeroMQ
      */
+    private function bindQueues($queues, $socket) {
 
-    private function pull($pullSocket, $routerSocket) {
-        $notification = $pullSocket->recv();
-
-        if ($notification) {
-            $this->logger->debug('0MQ notification received', [$notification]);
-
-            if (sscanf($notification, '%s %d', $name, $id) != 2) {
-                $this->logger->error('0MQ incorrect notification format', [$notification]);
-                return;
+        foreach ($queues as $queue) {
+            $options = $queue->getOptions();
+            if (!array_key_exists('zeromq_controller_socket', $options)) {
+                continue;
             }
-
-            if (!$registry->has($name)) {
-                $this->logger->error('0MQ no such queue', [$name]);
-                return;
-            }
-
-            $this->notifyWorker($name, $id, $routerSocket);
-        } else {
-            foreach ($registry->all() as $queue) {
-                $this->checkQueue($registry, $queue->getName());
-            }
+            $endpoints[] = $options['zeromq_controller_socket'];
         }
-    }
 
-    /*
-     * Bind the pull socket
-     */
-
-    private function bindPullSocket($queues, $socket) {
-        $options = $queues[0]->getOptions();
-        if (!array_key_exists('zeromq_controller_socket', $options)) {
+        if (!isset($endpoints)) {
             return;
         }
-
-        $this->logger->debug('0MQ binding to ', [$options['zeromq_controller_socket']]);
-        $socket->bind($options['zeromq_controller_socket']);
+        
+        $endpoints = array_unique($endpoints);
+        foreach ($endpoints as $endpoint) {
+            $this->logger->debug('0MQ binding to ' . $endpoint);
+            $socket->bind($endpoint);
+        }
+        
+        return;
     }
 
-    /*
-     * Bind the Router socket
-     */
+    private function pollQueue($registry, $name) {
+        $dispatcher = $this->container->get('event_dispatcher');
+        $messages = $registry->get($name)->receive();
 
-    private function bindRouterSocket($queues, $socket) {
-        $options = $queues[0]->getOptions();
-        if (!array_key_exists('zeromq_worker_socket', $options)) {
-            return;
+        foreach ($messages as $message) {
+            $messageEvent = new MessageEvent($name, $message);
+            $dispatcher->dispatch(Events::Message($name), $messageEvent);
         }
 
-        $this->logger->debug('0MQ binding to ', [$options['zeromq_worker_socket']]);
-        $socket->bind($options['zeromq_worker_socket']);
-    }
+        $msg = sprintf('Polling Queue %s, %d messages fetched', $name, sizeof($messages));
+        $this->logger->debug($msg);
+        $this->output->writeln($msg);
 
-    /*
-     * Notify the worker process of a message to process
-     */
-
-    private function notifyWorker($name, $id, $socket) {
-
-        // Find the LRU worker which is waiting
-        $address = $socket->recv();
-        $empty = $socket->recv();
-        $read = $socket->recv();
-
-        $socket->send($address, ZMQ::MODE_SNDMORE);
-        $socket->send("", ZMQ::MODE_SNDMORE);
-        $notification = sprintf('%s %d', $name, $id);
-        $socket->send("$notification");
+        return sizeof($messages);
     }
 
 }
