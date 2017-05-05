@@ -25,7 +25,9 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
     protected $container;
     protected $logger;
     protected $output;
-
+    protected $dispatcher;
+    protected $registry;
+    
     public function setContainer(ContainerInterface $container = null) {
         $this->container = $container;
     }
@@ -43,10 +45,12 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
     protected function execute(InputInterface $input, OutputInterface $output) {
         $this->output = $output;
         $this->logger = $this->container->get('logger');
-        $registry = $this->container->get('uecode_qpush');
+        $this->dispatcher = $this->container->get('event_dispatcher');
+        $this->registry = $this->container->get('uecode_qpush');
+        
         $time = ($input->getOption('time') === null) ? PHP_INT_MAX : time() + $input->getOption('time');
 
-        $queues = $registry->all();
+        $queues = $this->registry->all();
 
         $context = new \ZMQContext();
         $socket = new \ZMQSocket($context, \ZMQ::SOCKET_REQ);
@@ -62,12 +66,12 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
                 return;
             }
 
-            if (!$registry->has($name)) {
+            if (!$this->registry->has($name)) {
                 $this->logger->error('0MQ no such queue', [$name]);
                 return;
             }
 
-            $this->pollQueue($registry, $name, $id);
+            $this->pollQueueOne($name, $id);
             gc_collect_cycles();
         }
 
@@ -79,21 +83,38 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
      */
 
     private function connect($queues, $socket) {
-        $options = $queues[0]->getOptions();
-        if (!array_key_exists('zeromq_worker_socket', $options)) {
-            return 0;
+        foreach ($queues as $queue) {
+            $options = $queue->getOptions();
+            if (!array_key_exists('zeromq_worker_socket', $options)) {
+                continue;
+            }
+            $endpoints[] = $options['zeromq_worker_socket'];
         }
 
-        $this->logger->debug('0MQ binding to ', [$options['zeromq_worker_socket']]);
-        $socket->connect($options['zeromq_worker_socket']);
+        if (!isset($endpoints)) {
+            return;
+        }
+
+        $endpoints = array_unique($endpoints);
+
+        foreach ($endpoints as $endpoint) {
+            $this->logger->debug('0MQ binding to ', [$endpoint]);
+            $socket->connect($endpoint);
+        }
     }
 
-    private function pollQueue($registry, $name, $id) {
-        $dispatcher = $this->container->get('event_dispatcher');
-        $message = $registry->get($name)->receiveOne($id);
+    private function pollQueueOne($name, $id) {
+        
+        $message = $this->registry->get($name)->receiveOne($id);
 
         $messageEvent = new MessageEvent($name, $message);
-        $dispatcher->dispatch(Events::Message($name), $messageEvent);
+        $this->dispatcher->dispatch(Events::Message($name), $messageEvent);
+
+        $msg = sprintf('Polling Queue %s, message %d fetched', $name, $id);
+        $this->logger->debug($msg);
+        $this->output->writeln($msg);
+
+        return 1;
     }
 
 }
