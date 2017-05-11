@@ -73,7 +73,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $pullSocket->setSockOpt(\ZMQ::SOCKOPT_RCVTIMEO, $check);
 
         $this->bindQueues($queues, $pullSocket);
-        
+
         $routerSocket = new \ZMQSocket($context, \ZMQ::SOCKET_ROUTER);
         $this->bindRouterSocket($queues, $routerSocket);
 
@@ -93,7 +93,6 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
                     continue;
                 }
                 $this->notifyWorker($name, $id, $routerSocket);
-
             } else {
                 foreach ($this->registry->all() as $queue) {
                     $this->pollQueue($queue->getName(), $routerSocket);
@@ -131,7 +130,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         return;
     }
-    
+
     private function bindRouterSocket($queues, $socket) {
         foreach ($queues as $queue) {
             $options = $queue->getOptions();
@@ -154,7 +153,26 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         return;
     }
 
-    
+    /*
+     * Process any messages not delivered by ZeroMQ locally
+     */
+
+    private function pollQueue($name) {
+        $dispatcher = $this->container->get('event_dispatcher');
+        $messages = $this->registry->get($name)->receive();
+
+        foreach ($messages as $message) {
+            $messageEvent = new MessageEvent($name, $message);
+            $dispatcher->dispatch(Events::Message($name), $messageEvent);
+        }
+
+        $msg = sprintf('Polling Queue %s, %d messages fetched', $name, sizeof($messages));
+        $this->logger->debug($msg);
+        $this->output->writeln($msg);
+
+        return sizeof($messages);
+    }
+
     /*
      * Notify the worker process of a message to process
      */
@@ -170,5 +188,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $socket->send("", \ZMQ::MODE_SNDMORE);
         $notification = sprintf('%s %d', $name, $id);
         $socket->send("$notification");
+        $this->logger->debug('Notified worker ' . $address);
     }
+
 }
