@@ -32,6 +32,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $this->container = $container;
         $this->logger = $this->container->get('logger');
         $this->registry = $this->container->get('uecode_qpush');
+        $this->dispatcher = $this->container->get('event_dispatcher');
     }
 
     protected function configure() {
@@ -78,6 +79,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $this->bindRouterSocket($queues, $routerSocket);
 
         $this->logger->debug('0MQ ready to receive');
+        gc_enable();
         while (time() < $time) {
             $notification = $pullSocket->recv();
 
@@ -92,7 +94,8 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
                     $this->logger->debug('0MQ no such queue', [$name]);
                     continue;
                 }
-                $this->notifyWorker($name, $id, $routerSocket);
+                $this->notifyWorkers($name, $id, $routerSocket);
+                unset($notification);
             } else {
                 foreach ($this->registry->all() as $queue) {
                     $this->pollQueue($queue->getName(), $routerSocket);
@@ -158,12 +161,12 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
      */
 
     private function pollQueue($name) {
-        $dispatcher = $this->container->get('event_dispatcher');
+
         $messages = $this->registry->get($name)->receive();
 
         foreach ($messages as $message) {
             $messageEvent = new MessageEvent($name, $message);
-            $dispatcher->dispatch(Events::Message($name), $messageEvent);
+            $this->dispatcher->dispatch(Events::Message($name), $messageEvent);
         }
 
         $msg = sprintf('Polling Queue %s, %d messages fetched', $name, sizeof($messages));
@@ -174,10 +177,26 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     }
 
     /*
+     * Get list of event listeners and notify workers for each listener
+     */
+
+    private function notifyWorkers($name, $id, $socket) {
+        $eventName = $name.'.message_received';
+        $listeners = $this->dispatcher->getListeners($eventName);
+
+        foreach ($listeners as $listener) {
+            if  ($this->dispatcher->getListenerPriority($eventName, $listener) >= 0) {
+                $this->notifyWorker($name, $id, $listener, $socket);
+            }
+             
+        }
+    }
+
+    /*
      * Notify the worker process of a message to process
      */
 
-    private function notifyWorker($name, $id, $socket) {
+    private function notifyWorker($name, $id, $listener, $socket) {
 
         // Find the LRU worker which is waiting
         $address = $socket->recv();
@@ -186,9 +205,10 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         $socket->send($address, \ZMQ::MODE_SNDMORE);
         $socket->send("", \ZMQ::MODE_SNDMORE);
-        $notification = sprintf('%s %d', $name, $id);
+        
+        $callable = get_class($listener[0]) . '::' . $listener[1];
+        $notification = sprintf('%s %d %s', $name, $id, $callable);
         $socket->send("$notification");
-        $this->logger->debug('Notified worker ' . $address);
     }
 
 }

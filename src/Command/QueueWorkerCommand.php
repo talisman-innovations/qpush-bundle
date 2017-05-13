@@ -27,7 +27,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
     protected $output;
     protected $dispatcher;
     protected $registry;
-    
+
     public function setContainer(ContainerInterface $container = null) {
         $this->container = $container;
     }
@@ -47,7 +47,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $this->logger = $this->container->get('logger');
         $this->dispatcher = $this->container->get('event_dispatcher');
         $this->registry = $this->container->get('uecode_qpush');
-        
+
         $time = ($input->getOption('time') === null) ? PHP_INT_MAX : time() + $input->getOption('time');
 
         $queues = $this->registry->all();
@@ -57,11 +57,12 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $this->connect($queues, $socket);
 
         $this->logger->debug('0MQ ready to receive');
+        gc_enable();
         while (time() < $time) {
             $socket->send('ready');
             $notification = $socket->recv();
 
-            if (sscanf($notification, '%s %d', $name, $id) != 2) {
+            if (sscanf($notification, '%s %d %s', $name, $id, $callable) != 3) {
                 $this->logger->error('0MQ incorrect notification format', [$notification]);
                 return;
             }
@@ -71,7 +72,9 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
                 return;
             }
 
-            $this->pollQueueOne($name, $id);
+            $this->logger->debug('Received message ' . $callable);
+            $this->pollQueueOne($name, $id, $callable);
+            unset($notification);
             gc_collect_cycles();
         }
 
@@ -103,18 +106,36 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         }
     }
 
-    private function pollQueueOne($name, $id) {
-        
+    /*
+     * Retrieve the message, lookup the callable and call it
+     */
+
+    private function pollQueueOne($name, $id, $callable) {
+
+        $eventName = $name . '.message_received';
+        if (!$listener = $this->findListener($eventName, $callable)) {
+            return 0;
+        }
+
         $message = $this->registry->get($name)->receiveOne($id);
-
         $messageEvent = new MessageEvent($name, $message);
-        $this->dispatcher->dispatch(Events::Message($name), $messageEvent);
 
+        call_user_func($listener, $messageEvent, $eventName, $this->dispatcher);
+        unset($message, $messageEvent);
+        
         $msg = sprintf('Polling Queue %s, message %d fetched', $name, $id);
         $this->logger->debug($msg);
         $this->output->writeln($msg);
-
+           
         return 1;
     }
 
+    private function findListener($eventName, $callable) {
+        $listeners = $this->dispatcher->getListeners($eventName);
+        foreach ($listeners as $listener) {
+           if (get_class($listener[0]) . '::' . $listener[1] === $callable) {
+               return $listener;
+           }  
+        }
+    }
 }
