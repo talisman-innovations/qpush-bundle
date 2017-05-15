@@ -76,8 +76,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
 
             $this->logger->debug('Received message ' . $callable);
             $status = $this->pollQueueOne($name, $id, $callable);
-            
-            $socket->send('status ' . $status);
+            $this->storeStatus($id, $result);
             
             unset($notification);
             gc_collect_cycles();
@@ -122,18 +121,21 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
             return 0;
         }
 
-        $message = $this->registry->get($name)->receiveOne($id);
+        $queue = $this->registry->get($name);
+        $queue->receiveOne($id);
         $messageEvent = new MessageEvent($name, $message);
 
         try {
-            $return = call_user_func($listener, $messageEvent, $eventName, $this->dispatcher);
+            $result = call_user_func($listener, $messageEvent, $eventName, $this->dispatcher);
         } catch (Exception $e) {
             $this->logger('Caught exception: '. $e->getMessage());
-            $return = MessageEvent::MESSAGE_EVENT_EXCEPTION;
+            $result = MessageEvent::MESSAGE_EVENT_EXCEPTION;
         }
         
-        unset($message, $messageEvent);
-        return $return;
+        $messageResult = $queue->storeResult($message, $callable, $result)
+        unset($message, $messageEvent, $messageResult);
+        
+        return 1;
     }
 
     private function findListener($eventName, $callable) {

@@ -181,14 +181,13 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
      */
 
     private function notifyWorkers($name, $id, $socket) {
-        $eventName = $name.'.message_received';
+        $eventName = $name . '.message_received';
         $listeners = $this->dispatcher->getListeners($eventName);
 
         foreach ($listeners as $listener) {
-            if  ($this->dispatcher->getListenerPriority($eventName, $listener) >= 0) {
+            if ($this->dispatcher->getListenerPriority($eventName, $listener) >= 0) {
                 $this->notifyWorker($name, $id, $listener, $socket);
             }
-             
         }
     }
 
@@ -198,19 +197,16 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
     private function notifyWorker($name, $id, $listener, $socket) {
 
-        // Find the LRU worker which is waiting
         $address = $socket->recv();
         $empty = $socket->recv();
         $ready = $socket->recv();
 
-        $socket->send($address, \ZMQ::MODE_SNDMORE);
-        $socket->send("", \ZMQ::MODE_SNDMORE);
-        
         $callable = get_class($listener[0]) . '::' . $listener[1];
         $notification = sprintf('%s %d %s', $name, $id, $callable);
+
+        $socket->send($address, \ZMQ::MODE_SNDMORE);
+        $socket->send("", \ZMQ::MODE_SNDMORE);
         $socket->send($notification);
-        
-        
     }
 
 }

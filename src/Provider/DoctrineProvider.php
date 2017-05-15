@@ -26,6 +26,7 @@ use Doctrine\Common\Cache\Cache;
 use Monolog\Logger;
 use Uecode\Bundle\QPushBundle\Message\Message;
 use Uecode\Bundle\QPushBundle\Entity\DoctrineMessage;
+use Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult;
 
 class DoctrineProvider extends AbstractProvider {
 
@@ -312,4 +313,18 @@ class DoctrineProvider extends AbstractProvider {
         return (string) $id;
     }
 
+    /*
+     * Store the result of a message being processed
+     */
+    public function storeResult($doctrineMessage, $callable, $result) {
+        $doctrineMessageResult = new DoctrineMessageResult();
+        $doctrineMessageResult->setDoctrineMessage($doctrineMessage);
+        $doctrineMessageResult->setCallable($callable);
+        $doctrineMessageResult->setResult($result);
+        
+        $this->em->persist($doctrineMessageResult);
+        $this->em->flush();
+        
+        return $doctrineMessageResult;
+    }
 }

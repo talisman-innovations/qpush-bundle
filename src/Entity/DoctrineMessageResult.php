@@ -52,12 +52,56 @@ class DoctrineMessageResult {
      * @JoinColumn(name="queue_id", referencedColumnName="id")
      */
     private $doctrineMessage;
-    
+   
+      /**
+     * @ORM\Column(type="string") 
+     */
+    private $callable;
+
     /**
      * @ORM\Column(type="integer") 
      */
     private $result;
+
+    function getId() {
+        return $this->id;
+    }
+
+    function getCreated(): \DateTime {
+        return $this->created;
+    }
+
+    function getDoctrineMessage() {
+        return $this->doctrineMessage;
+    }
+
+    function getResult() {
+        return $this->result;
+    }
+
+    function setCreated(\DateTime $created) {
+        $this->created = $created;
+        return $this;
+    }
+
+    function setDoctrineMessage($doctrineMessage) {
+        $this->doctrineMessage = $doctrineMessage;
+        return $this;
+    }
+
+    function setResult($result) {
+        $this->result = $result;
+        return $this;
+    }
     
-    
+    function getCallable() {
+        return $this->callable;
+    }
+
+    function setCallable($callable) {
+        $this->callable = $callable;
+        return $this;
+    }
+
 
 }
