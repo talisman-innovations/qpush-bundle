@@ -28,7 +28,7 @@ use Gedmo\Mapping\Annotation as Gedmo;
 
 /**
  * @ORM\Entity
- * @ORM\Table(name="uecode_qpush_message_result",
+ * @ORM\Table(name="uecode_qpush_message_result")
  */
 class DoctrineMessageResult {
 
@@ -47,9 +47,9 @@ class DoctrineMessageResult {
      */
     private $created;
 
-    /*
-     * @ManyToOne(targetEntity="DoctineMessage")
-     * @JoinColumn(name="queue_id", referencedColumnName="id")
+    /**
+     * @ORM\ManyToOne(targetEntity="DoctineMessage")
+     * @ORM\JoinColumn(name="queue_id", referencedColumnName="id")
      */
     private $doctrineMessage;
    
