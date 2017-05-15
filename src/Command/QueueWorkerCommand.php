@@ -54,6 +54,8 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
 
         $context = new \ZMQContext();
         $socket = new \ZMQSocket($context, \ZMQ::SOCKET_REQ);
+        $socket->setSockOpt(ZMQ::SOCKOPT_IDENTITY, getmypid());
+
         $this->connect($queues, $socket);
 
         $this->logger->debug('0MQ ready to receive');
@@ -73,7 +75,10 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
             }
 
             $this->logger->debug('Received message ' . $callable);
-            $this->pollQueueOne($name, $id, $callable);
+            $status = $this->pollQueueOne($name, $id, $callable);
+            
+            $socket->send('status ' . $status);
+            
             unset($notification);
             gc_collect_cycles();
         }
@@ -120,22 +125,24 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $message = $this->registry->get($name)->receiveOne($id);
         $messageEvent = new MessageEvent($name, $message);
 
-        call_user_func($listener, $messageEvent, $eventName, $this->dispatcher);
-        unset($message, $messageEvent);
+        try {
+            $return = call_user_func($listener, $messageEvent, $eventName, $this->dispatcher);
+        } catch (Exception $e) {
+            $this->logger('Caught exception: '. $e->getMessage());
+            $return = MessageEvent::MESSAGE_EVENT_EXCEPTION;
+        }
         
-        $msg = sprintf('Polling Queue %s, message %d fetched', $name, $id);
-        $this->logger->debug($msg);
-        $this->output->writeln($msg);
-           
-        return 1;
+        unset($message, $messageEvent);
+        return $return;
     }
 
     private function findListener($eventName, $callable) {
         $listeners = $this->dispatcher->getListeners($eventName);
         foreach ($listeners as $listener) {
-           if (get_class($listener[0]) . '::' . $listener[1] === $callable) {
-               return $listener;
-           }  
+            if (get_class($listener[0]) . '::' . $listener[1] === $callable) {
+                return $listener;
+            }
         }
     }
+
 }

@@ -30,6 +30,10 @@ use Uecode\Bundle\QpushBundle\Message\Message;
  */
 class MessageEvent extends Event
 {
+    const MESSAGE_EVENT_SUCCESS = 0;
+    const MESSAGE_EVENT_FAILURE = 1;
+    const MESSAGE_EVENT_EXCEPTION = 2;
+    
     /**
      * Queue name
      *
