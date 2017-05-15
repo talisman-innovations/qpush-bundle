@@ -51,7 +51,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
 
         $context = new \ZMQContext();
         $socket = new \ZMQSocket($context, \ZMQ::SOCKET_REQ);
-        $socket->setSockOpt(ZMQ::SOCKOPT_IDENTITY, getmypid());
+        $socket->setSockOpt(\ZMQ::SOCKOPT_IDENTITY, getmypid());
 
         $this->connect($queues, $socket);
 
