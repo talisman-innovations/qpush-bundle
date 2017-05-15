@@ -48,7 +48,7 @@ class DoctrineMessageResult {
     private $created;
 
     /**
-     * @ORM\ManyToOne(targetEntity="DoctineMessage")
+     * @ORM\ManyToOne(targetEntity="DoctrineMessage")
      * @ORM\JoinColumn(name="queue_id", referencedColumnName="id")
      */
     private $doctrineMessage;
