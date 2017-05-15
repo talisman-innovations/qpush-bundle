@@ -67,7 +67,7 @@ class DoctrineMessageResult {
         return $this->id;
     }
 
-    function getCreated(): \DateTime {
+    function getCreated() {
         return $this->created;
     }
 
@@ -79,7 +79,7 @@ class DoctrineMessageResult {
         return $this->result;
     }
 
-    function setCreated(\DateTime $created) {
+    function setCreated($created) {
         $this->created = $created;
         return $this;
     }
@@ -102,6 +102,5 @@ class DoctrineMessageResult {
         $this->callable = $callable;
         return $this;
     }
-
-
+    
 }
