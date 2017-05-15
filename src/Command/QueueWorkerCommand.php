@@ -7,15 +7,12 @@
 namespace Uecode\Bundle\QPushBundle\Command;
 
 use Symfony\Component\Console\Command\Command;
-use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Uecode\Bundle\QPushBundle\Event\Events;
 use Uecode\Bundle\QPushBundle\Event\MessageEvent;
-use Psr\Log\LoggerInterface;
 
 /**
  * @author Steven Brookes <steven.brookes@talisman-innovations.com>
@@ -75,8 +72,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
             }
 
             $this->logger->debug('Received message ' . $callable);
-            $status = $this->pollQueueOne($name, $id, $callable);
-            $this->storeStatus($id, $result);
+            $this->pollQueueOne($name, $id, $callable);
             
             unset($notification);
             gc_collect_cycles();
@@ -122,7 +118,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         }
 
         $queue = $this->registry->get($name);
-        $queue->receiveOne($id);
+        $message=$queue->receiveOne($id);
         $messageEvent = new MessageEvent($name, $message);
 
         try {
@@ -132,7 +128,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
             $result = MessageEvent::MESSAGE_EVENT_EXCEPTION;
         }
         
-        $messageResult = $queue->storeResult($message, $callable, $result)
+        $messageResult = $queue->storeResult($message, $callable, $result);
         unset($message, $messageEvent, $messageResult);
         
         return 1;
