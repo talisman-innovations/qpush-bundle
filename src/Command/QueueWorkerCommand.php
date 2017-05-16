@@ -128,8 +128,8 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
             $result = MessageEvent::MESSAGE_EVENT_EXCEPTION;
         }
         
-        $messageResult = $queue->storeResult($message, $callable, $result);
-        unset($message, $messageEvent, $messageResult);
+        $queue->storeResult($id, $callable, $result);
+        unset($message, $messageEvent);
         
         return 1;
     }
