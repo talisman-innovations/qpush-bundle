@@ -48,10 +48,10 @@ class DoctrineMessageResult {
     private $created;
 
     /**
-     * @ORM\ManyToOne(targetEntity="DoctrineMessage")
-     * @ORM\JoinColumn(name="queue_id", referencedColumnName="id")
+     * @ORM\ManyToOne(targetEntity="DoctrineMessage", inversedBy="results")
+     * @ORM\JoinColumn(name="queue_id", referencedColumnName="id", onDelete="CASCADE")
      */
-    private $doctrineMessage;
+    private $message;
    
       /**
      * @ORM\Column(type="string") 
