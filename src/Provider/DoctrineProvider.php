@@ -187,7 +187,7 @@ class DoctrineProvider extends AbstractProvider {
         }
         
         $doctrineMessage = $this->getById($id);
-        $message = new DoctrineMessage($doctrineMessage->getId(), $doctrineMessage->getMessage(), []);
+        $message = new Message($id, $doctrineMessage->getMessage(), []);
         $doctrineMessage->setDelivered(true);
         $this->em->flush();
         return $message;
