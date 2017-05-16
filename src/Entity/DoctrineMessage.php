@@ -81,7 +81,7 @@ class DoctrineMessage {
     private $length;
     
      /** 
-     * @OneToMany(targetEntity="DoctrineMessageResult", mappedBy="message")
+     * @ORM\OneToMany(targetEntity="DoctrineMessageResult", mappedBy="message")
      */ 
     private $results; 
     
