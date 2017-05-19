@@ -320,7 +320,7 @@ class DoctrineProvider extends AbstractProvider {
         
         $message = $this->getById($id);
         $doctrineMessageResult = new DoctrineMessageResult();
-        $doctrineMessageResult->setDoctrineMessage($message);
+        $doctrineMessageResult->setDoctrineMessage($id);
         $doctrineMessageResult->setCallable($callable);
         $doctrineMessageResult->setResult($result);
         
