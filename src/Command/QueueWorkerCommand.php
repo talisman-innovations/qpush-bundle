@@ -124,7 +124,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         try {
             $result = call_user_func($listener, $messageEvent, $eventName, $this->dispatcher);
             $result = is_null($result) ? 0 : $result;
-        } catch (Exception $e) {
+        } catch (\Exception $e) {
             $this->logger->error('Caught exception: '. $e->getMessage());
             $result = MessageEvent::MESSAGE_EVENT_EXCEPTION;
         }
