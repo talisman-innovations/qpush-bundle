@@ -84,7 +84,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
             $notification = $pullSocket->recv();
 
             if ($notification) {
-                $this->logger->debug('0MQ notification received', [$notification]);
+                $this->logger->debug(getmypid() . ' 0MQ notification received', [$notification]);
 
                 if (sscanf($notification, '%s %d', $name, $id) != 2) {
                     continue;

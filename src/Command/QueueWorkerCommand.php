@@ -71,7 +71,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
                 return;
             }
 
-            $this->logger->debug('Received message ' . $callable);
+            $this->logger->debug(getmypid() .' 0MQ notification received ' . $notification);
             $this->pollQueueOne($name, $id, $callable);
             
             unset($notification);
@@ -125,7 +125,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
             $result = call_user_func($listener, $messageEvent, $eventName, $this->dispatcher);
             $result = is_null($result) ? 0 : $result;
         } catch (Exception $e) {
-            $this->logger('Caught exception: '. $e->getMessage());
+            $this->logger->error('Caught exception: '. $e->getMessage());
             $result = MessageEvent::MESSAGE_EVENT_EXCEPTION;
         }
         
