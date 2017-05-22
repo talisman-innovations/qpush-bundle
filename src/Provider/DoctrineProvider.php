@@ -328,8 +328,6 @@ class DoctrineProvider extends AbstractProvider {
         $message->getResults()->add($doctrineMessageResult);
         $this->logger->debug(print_r($message, true));
 
-        
-        $this->em->persist($message);
         $this->em->persist($doctrineMessageResult);
         $this->em->flush();
 
