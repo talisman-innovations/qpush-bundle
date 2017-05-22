@@ -326,7 +326,6 @@ class DoctrineProvider extends AbstractProvider {
         $message = $this->getById($id);
         $message->getResults()->add($doctrineMessageResult);
 
-
         $this->em->persist($doctrineMessageResult);
         $this->em->flush();
 

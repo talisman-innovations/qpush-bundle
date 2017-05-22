@@ -240,9 +240,4 @@ class DoctrineMessage {
         return $this->results;
     }
 
-    function setResults($results) {
-        $this->results = $results;
-    }
-
-
 }
