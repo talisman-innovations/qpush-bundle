@@ -324,9 +324,9 @@ class DoctrineProvider extends AbstractProvider {
         $doctrineMessageResult->setResult($result);
 
         $message = $this->getById($id);
-        $this->logger->debug('Before', $message);
+        $this->logger->debug(print_r($message, true));
         $message->getResults()->add($doctrineMessageResult);
-        $this->logger->debug('After', $message);
+        $this->logger->debug(print_r($message, true));
 
         
         $this->em->persist($message);
