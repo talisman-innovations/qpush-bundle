@@ -34,14 +34,15 @@ use Gedmo\Mapping\Annotation as Gedmo;
  *          @ORM\Index(name="uecode_qpush_created_idx",columns={"created"})})
  */
 class DoctrineMessage {
-    /** 
+
+    /**
      * @ORM\Id 
      * @ORM\GeneratedValue 
      * @ORM\Column(type="integer") 
      */
     private $id;
-    
-     /**
+
+    /**
      * @var \DateTime $created
      *
      * @Gedmo\Timestampable(on="create")
@@ -56,42 +57,49 @@ class DoctrineMessage {
      * @ORM\Column(type="datetime")
      */
     private $updated;
-    
+
     /**
      *
      * @ORM\Column(type="string")
      */
     private $queue;
-    
+
     /**
      *
      * @ORM\Column(type="boolean")
      */
     private $delivered;
-    
+
     /**
      *
      * @ORM\Column(type="array")
      */
     private $message;
 
-     /** 
+    /**
      * @ORM\Column(type="integer") 
      */
     private $length;
-    
-     /** 
+
+    /**
      * @ORM\OneToMany(targetEntity="DoctrineMessageResult", mappedBy="message")
-     */ 
-    private $results; 
+     */
+    private $results;
+
+    /*
+     * Constructor
+     */
     
+    public function __construct() {
+        $this->results = new ArrayCollection();
+    }
+
     /**
      * Get id
      *
      * @return integer
      */
-    public function getId()
-    {
+    public function getId() {
         return $this->id;
     }
 
@@ -102,8 +110,7 @@ class DoctrineMessage {
      *
      * @return DoctrineMessage
      */
-    public function setMessage($message)
-    {
+    public function setMessage($message) {
         $this->message = $message;
 
         return $this;
@@ -114,8 +121,7 @@ class DoctrineMessage {
      *
      * @return array
      */
-    public function getMessage()
-    {
+    public function getMessage() {
         return $this->message;
     }
 
@@ -126,8 +132,7 @@ class DoctrineMessage {
      *
      * @return DoctrineMessage
      */
-    public function setQueue($queue)
-    {
+    public function setQueue($queue) {
         $this->queue = $queue;
 
         return $this;
@@ -138,8 +143,7 @@ class DoctrineMessage {
      *
      * @return string
      */
-    public function getQueue()
-    {
+    public function getQueue() {
         return $this->queue;
     }
 
@@ -150,8 +154,7 @@ class DoctrineMessage {
      *
      * @return DoctrineMessage
      */
-    public function setDelivered($delivered)
-    {
+    public function setDelivered($delivered) {
         $this->delivered = $delivered;
 
         return $this;
@@ -162,8 +165,7 @@ class DoctrineMessage {
      *
      * @return boolean
      */
-    public function getDelivered()
-    {
+    public function getDelivered() {
         return $this->delivered;
     }
 
@@ -174,8 +176,7 @@ class DoctrineMessage {
      *
      * @return DoctrineMessage
      */
-    public function setCreated($created)
-    {
+    public function setCreated($created) {
         $this->created = $created;
 
         return $this;
@@ -186,8 +187,7 @@ class DoctrineMessage {
      *
      * @return \DateTime
      */
-    public function getCreated()
-    {
+    public function getCreated() {
         return $this->created;
     }
 
@@ -198,8 +198,7 @@ class DoctrineMessage {
      *
      * @return DoctrineMessage
      */
-    public function setUpdated($updated)
-    {
+    public function setUpdated($updated) {
         $this->updated = $updated;
 
         return $this;
@@ -210,8 +209,7 @@ class DoctrineMessage {
      *
      * @return \DateTime
      */
-    public function getUpdated()
-    {
+    public function getUpdated() {
         return $this->updated;
     }
 
@@ -222,8 +220,7 @@ class DoctrineMessage {
      *
      * @return DoctrineMessage
      */
-    public function setLength($length)
-    {
+    public function setLength($length) {
         $this->length = $length;
 
         return $this;
@@ -234,8 +231,17 @@ class DoctrineMessage {
      *
      * @return integer
      */
-    public function getLength()
-    {
+    public function getLength() {
         return $this->length;
     }
+
+    function getResults() {
+        return $this->results;
+    }
+
+    function setResults($results) {
+        $this->results = $results;
+    }
+
+
 }

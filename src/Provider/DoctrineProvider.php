@@ -185,7 +185,7 @@ class DoctrineProvider extends AbstractProvider {
         if (!$this->em) {
             return;
         }
-        
+
         $doctrineMessage = $this->getById($id);
         $message = new Message($id, $doctrineMessage->getMessage(), []);
         $doctrineMessage->setDelivered(true);
@@ -316,17 +316,21 @@ class DoctrineProvider extends AbstractProvider {
     /*
      * Store the result of a message being processed
      */
+
     public function storeResult($id, $callable, $result) {
-        
-        $message = $this->getById($id);
+
         $doctrineMessageResult = new DoctrineMessageResult();
-        $doctrineMessageResult->setDoctrineMessage($id);
         $doctrineMessageResult->setCallable($callable);
         $doctrineMessageResult->setResult($result);
-        
+
+        $message = $this->getById($id);
+        $message->getResults()->add($doctrineMessageResult);
+
+
         $this->em->persist($doctrineMessageResult);
         $this->em->flush();
-        
+
         return $doctrineMessageResult;
     }
+
 }

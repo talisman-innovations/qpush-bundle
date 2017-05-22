@@ -71,21 +71,12 @@ class DoctrineMessageResult {
         return $this->created;
     }
 
-    function getDoctrineMessage() {
-        return $this->doctrineMessage;
-    }
-
     function getResult() {
         return $this->result;
     }
 
     function setCreated($created) {
         $this->created = $created;
-        return $this;
-    }
-
-    function setDoctrineMessage($doctrineMessage) {
-        $this->doctrineMessage = $doctrineMessage;
         return $this;
     }
 
@@ -103,4 +94,12 @@ class DoctrineMessageResult {
         return $this;
     }
     
+    function getMessage() {
+        return $this->message;
+    }
+
+    function setMessage($message) {
+        $this->message = $message;
+    }
+
 }
