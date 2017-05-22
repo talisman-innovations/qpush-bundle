@@ -49,7 +49,6 @@ class DoctrineMessageResult {
 
     /**
      * @ORM\ManyToOne(targetEntity="DoctrineMessage", inversedBy="results")
-     * @ORM\JoinColumn(name="queue_id", referencedColumnName="id", onDelete="CASCADE")
      */
     private $message;
    
