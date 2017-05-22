@@ -199,7 +199,7 @@ class DoctrineProvider extends AbstractProvider {
      * @param mixed $id A message identifier or resource
      */
     public function delete($id) {
-        $doctrineMessage = $this->repository->findById($id);
+        $doctrineMessage = $this->repository->find($id);
         $doctrineMessage->setDelivered(true);
         $this->em->flush();
 
@@ -319,14 +319,12 @@ class DoctrineProvider extends AbstractProvider {
 
     public function storeResult($id, $callable, $result) {
 
+        $doctrineMessage = $this->repository->find($id);
+        
         $doctrineMessageResult = new DoctrineMessageResult();
         $doctrineMessageResult->setCallable($callable);
         $doctrineMessageResult->setResult($result);
-
-        $message = $this->getById($id);
-        $this->logger->debug(print_r($message, true));
-        $message->getResults()->add($doctrineMessageResult);
-        $this->logger->debug(print_r($message, true));
+        $doctrineMessageResult->setMessage($doctrineMessage);
 
         $this->em->persist($doctrineMessageResult);
         $this->em->flush();

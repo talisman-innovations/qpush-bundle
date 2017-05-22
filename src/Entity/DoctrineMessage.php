@@ -94,150 +94,77 @@ class DoctrineMessage {
     public function __construct() {
         $this->results = new ArrayCollection();
     }
-
-    /**
-     * Get id
-     *
-     * @return integer
-     */
-    public function getId() {
+  
+    function getId() {
         return $this->id;
     }
 
-    /**
-     * Set message
-     *
-     * @param array $message
-     *
-     * @return DoctrineMessage
-     */
-    public function setMessage($message) {
-        $this->message = $message;
-
-        return $this;
-    }
-
-    /**
-     * Get message
-     *
-     * @return array
-     */
-    public function getMessage() {
-        return $this->message;
-    }
-
-    /**
-     * Set queue
-     *
-     * @param string $queue
-     *
-     * @return DoctrineMessage
-     */
-    public function setQueue($queue) {
-        $this->queue = $queue;
-
-        return $this;
-    }
-
-    /**
-     * Get queue
-     *
-     * @return string
-     */
-    public function getQueue() {
-        return $this->queue;
-    }
-
-    /**
-     * Set delivered
-     *
-     * @param boolean $delivered
-     *
-     * @return DoctrineMessage
-     */
-    public function setDelivered($delivered) {
-        $this->delivered = $delivered;
-
-        return $this;
-    }
-
-    /**
-     * Get delivered
-     *
-     * @return boolean
-     */
-    public function getDelivered() {
-        return $this->delivered;
-    }
-
-    /**
-     * Set created
-     *
-     * @param \DateTime $created
-     *
-     * @return DoctrineMessage
-     */
-    public function setCreated($created) {
-        $this->created = $created;
-
-        return $this;
-    }
-
-    /**
-     * Get created
-     *
-     * @return \DateTime
-     */
-    public function getCreated() {
+    function getCreated() {
         return $this->created;
     }
 
-    /**
-     * Set updated
-     *
-     * @param \DateTime $updated
-     *
-     * @return DoctrineMessage
-     */
-    public function setUpdated($updated) {
-        $this->updated = $updated;
-
-        return $this;
-    }
-
-    /**
-     * Get updated
-     *
-     * @return \DateTime
-     */
-    public function getUpdated() {
+    function getUpdated() {
         return $this->updated;
     }
 
-    /**
-     * Set length
-     *
-     * @param integer $length
-     *
-     * @return DoctrineMessage
-     */
-    public function setLength($length) {
-        $this->length = $length;
-
-        return $this;
+    function getQueue() {
+        return $this->queue;
     }
 
-    /**
-     * Get length
-     *
-     * @return integer
-     */
-    public function getLength() {
+    function getDelivered() {
+        return $this->delivered;
+    }
+
+    function getMessage() {
+        return $this->message;
+    }
+
+    function getLength() {
         return $this->length;
     }
 
     function getResults() {
         return $this->results;
     }
+
+    function setId($id) {
+        $this->id = $id;
+    }
+
+    function setCreated(\DateTime $created) {
+        $this->created = $created;
+        return $this;
+    }
+
+    function setUpdated(\DateTime $updated) {
+        $this->updated = $updated;
+        return $this;
+    }
+
+    function setQueue($queue) {
+        $this->queue = $queue;
+        return $this;
+    }
+
+    function setDelivered($delivered) {
+        $this->delivered = $delivered;
+        return $this;
+    }
+
+    function setMessage($message) {
+        $this->message = $message;
+        return $this;
+    }
+
+    function setLength($length) {
+        $this->length = $length;
+        return $this;
+    }
+
+    function setResults($results) {
+        $this->results = $results;
+        return $this;
+    }
+
 
 }

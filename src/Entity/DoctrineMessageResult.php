@@ -49,6 +49,8 @@ class DoctrineMessageResult {
 
     /**
      * @ORM\ManyToOne(targetEntity="DoctrineMessage", inversedBy="results")
+     * @ORM\JoinColumn(name="message_id", referencedColumnName="id", 
+     *  nullable=false, onDelete="CASCADE" )
      */
     private $message;
    
@@ -61,7 +63,7 @@ class DoctrineMessageResult {
      * @ORM\Column(type="integer") 
      */
     private $result;
-
+ 
     function getId() {
         return $this->id;
     }
@@ -70,35 +72,37 @@ class DoctrineMessageResult {
         return $this->created;
     }
 
-    function getResult() {
-        return $this->result;
+    function getMessage() {
+        return $this->message;
     }
 
-    function setCreated($created) {
-        $this->created = $created;
-        return $this;
-    }
-
-    function setResult($result) {
-        $this->result = $result;
-        return $this;
-    }
-    
     function getCallable() {
         return $this->callable;
     }
 
-    function setCallable($callable) {
-        $this->callable = $callable;
-        return $this;
+    function getResult() {
+        return $this->result;
     }
-    
-    function getMessage() {
-        return $this->message;
+
+    function setId($id) {
+        $this->id = $id;
+    }
+
+    function setCreated(\DateTime $created) {
+        $this->created = $created;
     }
 
     function setMessage($message) {
         $this->message = $message;
     }
+
+    function setCallable($callable) {
+        $this->callable = $callable;
+    }
+
+    function setResult($result) {
+        $this->result = $result;
+    }
+
 
 }
