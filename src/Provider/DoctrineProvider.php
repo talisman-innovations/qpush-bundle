@@ -100,9 +100,6 @@ class DoctrineProvider extends AbstractProvider {
      * @return string
      */
     public function publish(array $message, array $options = []) {
-        if (!$this->em) {
-            return '';
-        }
 
         $doctrineMessage = new DoctrineMessage();
         $doctrineMessage->setQueue($this->name)
@@ -155,9 +152,6 @@ class DoctrineProvider extends AbstractProvider {
      * @return array
      */
     public function receive(array $options = []) {
-        if (!$this->em) {
-            return [];
-        }
 
         $doctrineMessages = $this->repository->findBy(
                 array('delivered' => false, 'queue' => $this->name), array('id' => 'ASC')
@@ -182,9 +176,6 @@ class DoctrineProvider extends AbstractProvider {
      */
 
     public function receiveOne($id) {
-        if (!$this->em) {
-            return;
-        }
 
         $doctrineMessage = $this->getById($id);
         $message = new Message($id, $doctrineMessage->getMessage(), []);
@@ -298,16 +289,13 @@ class DoctrineProvider extends AbstractProvider {
      * @return string
      */
     public function redeliver($id) {
-        if (!$this->em) {
-            return '';
-        }
 
         $message = $this->repository->find($id);
         $message->setDelivered(false);
         $this->em->flush();
 
-        if (array_key_exists('zeromq_socket', $this->options)) {
-            $this->notify($this->options['zeromq_socket'], $this->name, $id);
+        if (array_key_exists('zeromq_controller_socket', $this->options)) {
+            $this->notify($this->options['zeromq_controller_socket'], $this->name, $id);
         }
 
         return (string) $id;
