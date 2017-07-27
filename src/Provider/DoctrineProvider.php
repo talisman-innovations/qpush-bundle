@@ -295,7 +295,7 @@ class DoctrineProvider extends AbstractProvider {
         $this->em->flush();
 
         if (array_key_exists('zeromq_controller_socket', $this->options)) {
-            $this->notify($this->options['zeromq_controller_socket'], $this->name, $id);
+            $this->push($this->options['zeromq_controller_socket'], $this->name, $id);
         }
 
         return (string) $id;
