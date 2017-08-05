@@ -30,7 +30,6 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     public function setContainer(ContainerInterface $container = null) {
 
         $this->container = $container;
-        $this->logger = $this->container->get('logger');
         $this->registry = $this->container->get('uecode_qpush');
         $this->dispatcher = $this->container->get('event_dispatcher');
     }
@@ -78,20 +77,23 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $routerSocket = new \ZMQSocket($context, \ZMQ::SOCKET_ROUTER);
         $this->bindRouterSocket($queues, $routerSocket);
 
-        $this->logger->debug('0MQ ready to receive');
+        $this->logger->debug('0MQ controller ready to receive');
+        $notificationCount = 0;
         gc_enable();
+        
         while (time() < $time) {
             $notification = $pullSocket->recv();
 
             if ($notification) {
-                $this->logger->debug(getmypid() . ' 0MQ notification received', [$notification]);
-
+                $notificationCount++;
+                $this->logger->debug(getmypid() . ' 0MQ controller notification received', [$notification, $notificationCount]);
+                
                 if (sscanf($notification, '%s %d', $name, $id) != 2) {
                     continue;
                 }
 
                 if (!$this->registry->has($name)) {
-                    $this->logger->debug('0MQ no such queue', [$name]);
+                    $this->logger->debug('0MQ controller no such queue', [$name]);
                     continue;
                 }
                 $this->notifyWorkers($name, $id, $routerSocket);
@@ -204,6 +206,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $callable = get_class($listener[0]) . '::' . $listener[1];
         $notification = sprintf('%s %d %s', $name, $id, $callable);
 
+        $this->logger->debug(getmypid() . ' 0MQ controller notify worker', [$name, $id, $callable]);
         $socket->send($address, \ZMQ::MODE_SNDMORE);
         $socket->send("", \ZMQ::MODE_SNDMORE);
         $socket->send($notification);

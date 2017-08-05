@@ -56,22 +56,25 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $this->connect($queues, $socket);
 
         $this->logger->debug('0MQ ready to receive');
+        $notificationCount = 0;
         gc_enable();
+        
         while (time() < $time) {
             $socket->send('ready');
             $notification = $socket->recv();
+            $notificationCount++;
 
             if (sscanf($notification, '%s %d %s', $name, $id, $callable) != 3) {
-                $this->logger->error('0MQ incorrect notification format', [$notification]);
+                $this->logger->error(getmypid() .' 0MQ worker incorrect notification format', [$notification]);
                 return;
             }
 
             if (!$this->registry->has($name)) {
-                $this->logger->error('0MQ no such queue', [$name]);
+                $this->logger->error(getmypid() .' 0MQ worker no such queue', [$name]);
                 return;
             }
 
-            $this->logger->debug(getmypid() .' 0MQ notification received ' . $notification);
+            $this->logger->debug(getmypid() .' 0MQ worker notification received ', [$notification, $notificationCount]);
             $this->pollQueueOne($name, $id, $callable);
             
             unset($notification);
