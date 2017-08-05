@@ -31,6 +31,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         $this->container = $container;
         $this->registry = $this->container->get('uecode_qpush');
+        $this->logger = $this->container->get('logger');
         $this->dispatcher = $this->container->get('event_dispatcher');
     }
 
@@ -80,14 +81,14 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $this->logger->debug('0MQ controller ready to receive');
         $notificationCount = 0;
         gc_enable();
-        
+
         while (time() < $time) {
             $notification = $pullSocket->recv();
 
             if ($notification) {
                 $notificationCount++;
                 $this->logger->debug(getmypid() . ' 0MQ controller notification received', [$notification, $notificationCount]);
-                
+
                 if (sscanf($notification, '%s %d', $name, $id) != 2) {
                     continue;
                 }
