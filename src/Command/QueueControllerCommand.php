@@ -76,18 +76,16 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $this->bindQueues($queues, $pullSocket);
 
         $routerSocket = new \ZMQSocket($context, \ZMQ::SOCKET_ROUTER);
+        $routerSocket->setSockOpt(\ZMQ::SOCKOPT_LINGER, 0);
         $this->bindRouterSocket($queues, $routerSocket);
 
         $this->logger->debug('0MQ controller ready to receive');
-        $notificationCount = 0;
-        gc_enable();
 
         while (time() < $time) {
             $notification = $pullSocket->recv();
 
             if ($notification) {
-                $notificationCount++;
-                $this->logger->debug(getmypid() . ' 0MQ controller notification received', [$notification, $notificationCount]);
+                $this->logger->debug(getmypid() . ' 0MQ controller notification received', [$notification]);
 
                 if (sscanf($notification, '%s %d', $name, $id) != 2) {
                     continue;
@@ -98,15 +96,14 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
                     continue;
                 }
                 $this->notifyWorkers($name, $id, $routerSocket);
-                unset($notification);
             } else {
                 foreach ($this->registry->all() as $queue) {
                     $this->pollQueue($queue->getName(), $routerSocket);
                 }
             }
-            gc_collect_cycles();
         }
 
+        $this->logger->debug('0MQ controller exiting');
         return 0;
     }
 

@@ -52,17 +52,15 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $context = new \ZMQContext();
         $socket = new \ZMQSocket($context, \ZMQ::SOCKET_REQ);
         $socket->setSockOpt(\ZMQ::SOCKOPT_IDENTITY, getmypid());
-
+        $socket->setSockOpt(\ZMQ::SOCKOPT_LINGER,0);
+  
         $this->connect($queues, $socket);
 
         $this->logger->debug('0MQ ready to receive');
-        $notificationCount = 0;
-        gc_enable();
         
         while (time() < $time) {
             $socket->send('ready');
             $notification = $socket->recv();
-            $notificationCount++;
 
             if (sscanf($notification, '%s %d %s', $name, $id, $callable) != 3) {
                 $this->logger->error(getmypid() .' 0MQ worker incorrect notification format', [$notification]);
@@ -74,13 +72,11 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
                 return;
             }
 
-            $this->logger->debug(getmypid() .' 0MQ worker notification received ', [$notification, $notificationCount]);
+            $this->logger->debug(getmypid() .' 0MQ worker notification received ', [$notification]);
             $this->pollQueueOne($name, $id, $callable);
-            
-            unset($notification);
-            gc_collect_cycles();
         }
 
+        $this->logger->debug(getmypid() .' 0MQ worker exiting');
         return 0;
     }
 
