@@ -35,6 +35,8 @@ class DoctrineProvider extends AbstractProvider {
     protected $em;
     protected $repository;
     protected static $entityName = 'Uecode\Bundle\QPushBundle\Entity\DoctrineMessage';
+    protected $context;
+    protected $sender;
 
     /**
      * Constructor for Provider classes
@@ -52,6 +54,13 @@ class DoctrineProvider extends AbstractProvider {
         $this->logger = $logger;
         $this->em = $client;
         $this->repository = $this->em->getRepository(self::$entityName);
+
+        if (class_exists('\ZMQ') && 
+                array_key_exists('zeromq_controller_socket', $this->options)) {
+            $this->context = new \ZMQContext();
+            $this->sender = new \ZMQSocket($this->context, \ZMQ::SOCKET_PUSH);
+            $this->sender->connect($this->options['zeromq_controller_socket']);
+        }
     }
 
     /**
@@ -111,8 +120,8 @@ class DoctrineProvider extends AbstractProvider {
         $this->em->flush();
         $id = $doctrineMessage->getId();
 
-        if (array_key_exists('zeromq_controller_socket', $this->options)) {
-            $this->push($this->options['zeromq_controller_socket'], $this->name, $id);
+        if (isset($this->sender)) {
+            $this->push($this->sender, $this->name, $id);
         }
 
         return (string) $id;
@@ -121,18 +130,11 @@ class DoctrineProvider extends AbstractProvider {
     /**
      * Pushes a message to the controller using ZeroMQ
      *
-     * @param string $endpoint The ZeroMQ endpoint to send to
+     * @param socket $sender The ZeroMQ socket to send to
      * @param string $name The name of the queue
      * @param integer $id  The ID os the message
      */
-    protected function push($endpoint, $name, $id) {
-        if (!class_exists('\ZMQ')) {
-            return;
-        }
-
-        $context = new \ZMQContext();
-        $sender = new \ZMQSocket($context, \ZMQ::SOCKET_PUSH);
-        $sender->connect($endpoint);
+    protected function push($sender, $name, $id) {
 
         $notification = sprintf('%s %d', $name, $id);
         $sender->send($notification);
@@ -308,7 +310,7 @@ class DoctrineProvider extends AbstractProvider {
     public function storeResult($id, $callable, $result) {
 
         $doctrineMessage = $this->repository->find($id);
-        
+
         $doctrineMessageResult = new DoctrineMessageResult();
         $doctrineMessageResult->setCallable($callable);
         $doctrineMessageResult->setResult($result);
