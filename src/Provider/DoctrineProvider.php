@@ -241,10 +241,10 @@ class DoctrineProvider extends AbstractProvider {
         $field = (isset($data['field'])) ? $data['field'] : 'message';
 
         if (isset($data['search']) && $data['search'] !== null && $field == 'message') {
-            $qb->andWhere('MATCH (p.' . $field . ') AGAINST (:contains)');
+            $qb->andWhere('MATCH_AGAINST(p.' . $field . ' ,:contains)');
             $qb->setParameter('contains', $data['search']);
         } else {
-            $qb->andWhere('p.' . $field .  '= :equals');
+            $qb->andWhere('p.' . $field .  ' = :equals');
             $qb->setParameter('equals', $data['search']);
         }
             
