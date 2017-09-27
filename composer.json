@@ -40,7 +40,8 @@
         "symfony/finder": "Required to use File as a Queue Provider",
         "symfony/filesystem": "Required to use File as a Queue Provider",
         "doctrine/orm": "Required to use Doctrine as a Queue Provider",
-        "stof/doctrine-extensions-bundle": "Required to use Doctrine as a Queue Provider"
+        "stof/doctrine-extensions-bundle": "Required to use Doctrine as a Queue Provider",
+        "beberlei/DoctrineExtensions":"Required to use Doctrine as a Queue Provider"
     },
     "autoload": {
         "psr-4": {
