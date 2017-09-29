@@ -240,14 +240,16 @@ class DoctrineProvider extends AbstractProvider {
 
         $field = (isset($data['field'])) ? $data['field'] : 'message';
 
-        if (isset($data['search']) && $data['search'] !== null && $field == 'message') {
-            $qb->andWhere('MATCH(p.' . $field .') AGAINST(:contains) > 0');
-            $qb->setParameter('contains', $data['search']);
-        } else {
-            $qb->andWhere('p.' . $field .  ' = :equals');
-            $qb->setParameter('equals', $data['search']);
+        if (isset($data['search']) && $data['search'] !== null) {
+            if ($field == 'message') {
+                $qb->andWhere('MATCH(p.' . $field . ') AGAINST(:contains) > 0');
+                $qb->setParameter('contains', $data['search']);
+            } else {
+                $qb->andWhere('p.' . $field . ' = :equals');
+                $qb->setParameter('equals', $data['search']);
+            }
         }
-            
+
         if (isset($data['from']) && $data['from'] !== null && isset($data['to']) && $data['to'] !== null) {
             $qb->andWhere('p.created BETWEEN :from AND :to');
             $qb->setParameter('from', $data['from']);
