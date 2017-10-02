@@ -242,7 +242,7 @@ class DoctrineProvider extends AbstractProvider {
 
         if (isset($data['search']) && $data['search'] !== null) {
             if ($field == 'message') {
-                $qb->andWhere('MATCH(p.' . $field . ') AGAINST(:contains) > 0');
+                $qb->andWhere('MATCH(p.' . $field . ') AGAINST(:contains boolean) > 0');
                 $qb->setParameter('contains', $data['search']);
             } else {
                 $qb->andWhere('p.' . $field . ' = :equals');
