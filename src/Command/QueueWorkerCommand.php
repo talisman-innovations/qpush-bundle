@@ -52,31 +52,38 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $context = new \ZMQContext();
         $socket = new \ZMQSocket($context, \ZMQ::SOCKET_REQ);
         $socket->setSockOpt(\ZMQ::SOCKOPT_IDENTITY, getmypid());
-        $socket->setSockOpt(\ZMQ::SOCKOPT_LINGER,0);
-  
-        $this->connect($queues, $socket);
+        $socket->setSockOpt(\ZMQ::SOCKOPT_LINGER, 0);
 
+        if ($input->getOption('time')) {
+            $socket->setSockOpt(\ZMQ::SOCKOPT_RCVTIMEO, $input->getOption('time') * 1000);
+        }
+
+        $this->connect($queues, $socket);
         $this->logger->debug('0MQ ready to receive');
-        
+
         while (time() < $time) {
             $socket->send('ready');
             $notification = $socket->recv();
 
+            if (!$notification) {
+                continue;
+            }
+
             if (sscanf($notification, '%s %d %s', $name, $id, $callable) != 3) {
-                $this->logger->error(getmypid() .' 0MQ worker incorrect notification format', [$notification]);
+                $this->logger->error(getmypid() . ' 0MQ worker incorrect notification format', [$notification]);
                 return;
             }
 
             if (!$this->registry->has($name)) {
-                $this->logger->error(getmypid() .' 0MQ worker no such queue', [$name]);
+                $this->logger->error(getmypid() . ' 0MQ worker no such queue', [$name]);
                 return;
             }
 
-            $this->logger->debug(getmypid() .' 0MQ worker notification received ', [$notification]);
+            $this->logger->debug(getmypid() . ' 0MQ worker notification received ', [$notification]);
             $this->pollQueueOne($name, $id, $callable);
         }
 
-        $this->logger->debug(getmypid() .' 0MQ worker exiting');
+        $this->logger->debug(getmypid() . ' 0MQ worker exiting');
         return 0;
     }
 
@@ -117,20 +124,20 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         }
 
         $queue = $this->registry->get($name);
-        $message=$queue->receiveOne($id);
+        $message = $queue->receiveOne($id);
         $messageEvent = new MessageEvent($name, $message);
 
         try {
             $result = call_user_func($listener, $messageEvent, $eventName, $this->dispatcher);
             $result = is_null($result) ? 0 : $result;
         } catch (\Exception $e) {
-            $this->logger->error('Caught exception: '. $e->getMessage());
+            $this->logger->error('Caught exception: ' . $e->getMessage());
             $result = MessageEvent::MESSAGE_EVENT_EXCEPTION;
         }
-        
+
         $queue->storeResult($id, $callable, $result);
         unset($message, $messageEvent);
-        
+
         return 1;
     }
 
