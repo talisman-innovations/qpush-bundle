@@ -59,10 +59,13 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         }
 
         $this->connect($queues, $socket);
-        $this->logger->debug('0MQ ready to receive');
+        $this->logger->debug(getmypid() . '0MQ ready to receive');
 
+        $socket->send('ready');
+        $this->logger->debug(getmypid() . '0MQ sent ready');
+        
         while (time() < $time) {
-            $socket->send('ready');
+               
             $notification = $socket->recv();
 
             if (!$notification) {
@@ -81,6 +84,8 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
 
             $this->logger->debug(getmypid() . ' 0MQ worker notification received ', [$notification]);
             $this->pollQueueOne($name, $id, $callable);
+            $socket->send('ready');
+            $this->logger->debug(getmypid() . '0MQ sent ready');
         }
 
         $this->logger->debug(getmypid() . ' 0MQ worker exiting');
@@ -107,7 +112,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $endpoints = array_unique($endpoints);
 
         foreach ($endpoints as $endpoint) {
-            $this->logger->debug('0MQ binding to ', [$endpoint]);
+            $this->logger->debug(getmypid() .'0MQ binding to ', [$endpoint]);
             $socket->connect($endpoint);
         }
     }

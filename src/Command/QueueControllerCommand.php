@@ -76,7 +76,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $this->bindQueues($queues, $pullSocket);
 
         $routerSocket = new \ZMQSocket($context, \ZMQ::SOCKET_ROUTER);
-        $routerSocket->setSockOpt(\ZMQ::SOCKOPT_LINGER, 0);
+        $routerSocket->setSockOpt(\ZMQ::SOCKOPT_LINGER, 300000);
         $this->bindRouterSocket($queues, $routerSocket);
 
         $this->logger->debug('0MQ controller ready to receive');
