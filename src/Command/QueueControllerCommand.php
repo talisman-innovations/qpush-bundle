@@ -15,7 +15,6 @@ use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Uecode\Bundle\QPushBundle\Event\Events;
 use Uecode\Bundle\QPushBundle\Event\MessageEvent;
-use Psr\Log\LoggerInterface;
 
 /**
  * @author Steven Brookes <steven.brookes@talisman-innovations.com>
@@ -26,7 +25,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     protected $registry;
     protected $logger;
     protected $output;
-
+    
     public function setContainer(ContainerInterface $container = null) {
 
         $this->container = $container;
@@ -79,7 +78,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $routerSocket->setSockOpt(\ZMQ::SOCKOPT_LINGER, 300000);
         $this->bindRouterSocket($queues, $routerSocket);
 
-        $this->logger->debug('0MQ controller ready to receive');
+        $this->logger->debug(getmypid() . ' 0MQ controller ready to receive');
 
         while (time() < $time) {
             $notification = $pullSocket->recv();
@@ -92,7 +91,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
                 }
 
                 if (!$this->registry->has($name)) {
-                    $this->logger->debug('0MQ controller no such queue', [$name]);
+                    $this->logger->debug(getmypid() . ' 0MQ controller no such queue', [$name]);
                     continue;
                 }
                 $this->notifyWorkers($name, $id, $routerSocket);
@@ -103,7 +102,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
             }
         }
 
-        $this->logger->debug('0MQ controller exiting');
+        $this->logger->debug(getmypid() . ' 0MQ controller exiting');
         return 0;
     }
 
@@ -127,7 +126,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         $endpoints = array_unique($endpoints);
         foreach ($endpoints as $endpoint) {
-            $this->logger->debug('0MQ binding to ' . $endpoint);
+            $this->logger->debug(getmypid() . ' 0MQ binding to ' . $endpoint);
             $socket->bind($endpoint);
         }
 
@@ -149,7 +148,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         $endpoints = array_unique($endpoints);
         foreach ($endpoints as $endpoint) {
-            $this->logger->debug('0MQ binding to ' . $endpoint);
+            $this->logger->debug(getmypid() . ' 0MQ binding to ' . $endpoint);
             $socket->bind($endpoint);
         }
 
