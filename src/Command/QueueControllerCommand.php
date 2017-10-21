@@ -26,6 +26,8 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     protected $logger;
     protected $output;
     
+    use \Uecode\Bundle\QPushBundle\Traits\EndpointTrait;
+    
     public function setContainer(ContainerInterface $container = null) {
 
         $this->container = $container;
@@ -137,8 +139,8 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         return;
     }
 
-        /*
-     * Bind to all the queues using ZeroMQ
+    /*
+     * Unbind to all the queues using ZeroMQ
      */
 
     private function unbindQueues($queues, $socket) {
@@ -161,22 +163,6 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         }
 
         return;
-    }
-    /*
-     * Get array of endpoints from the queue options
-     */
-
-    private function endpoints($queues, $key) {
-        $endpoints = array();
-
-        foreach ($queues as $queue) {
-            $options = $queue->getOptions();
-            if (array_key_exists($key, $options)) {
-                $endpoints[] = $options[$key];
-            }
-        }
-
-        return array_unique($endpoints);
     }
     
     /*

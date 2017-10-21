@@ -24,6 +24,8 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
     protected $output;
     protected $dispatcher;
     protected $registry;
+    
+    use \Uecode\Bundle\QPushBundle\Traits\EndpointTrait;
 
     public function setContainer(ContainerInterface $container = null) {
         $this->container = $container;
@@ -95,7 +97,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
      */
 
     private function connect($queues, $socket) {
-        $endpoints = $this->endpoints($queues);
+        $endpoints = $this->endpoints($queues,'zeromq_worker_socket');
 
         foreach ($endpoints as $endpoint) {
             $this->logger->debug(getmypid() . ' 0MQ connecting to ', [$endpoint]);
@@ -108,29 +110,12 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
      */
 
     private function disconnect($queues, $socket) {
-        $endpoints = $this->endpoints($queues);
+        $endpoints = $this->endpoints($queues,'zeromq_worker_socket');
 
         foreach ($endpoints as $endpoint) {
             $this->logger->debug(getmypid() . ' 0MQ disconnecting from ', [$endpoint]);
             $socket->disconnect($endpoint);
         }
-    }
-
-    /*
-     * Get array of endpoints from the queue options
-     */
-
-    private function endpoints($queues) {
-        $endpoints = array();
-
-        foreach ($queues as $queue) {
-            $options = $queue->getOptions();
-            if (array_key_exists('zeromq_worker_socket', $options)) {
-                $endpoints[] = $options['zeromq_worker_socket'];
-            }
-        }
-
-        return array_unique($endpoints);
     }
 
     /*
