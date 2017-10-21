@@ -76,6 +76,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         $routerSocket = new \ZMQSocket($context, \ZMQ::SOCKET_ROUTER);
         $routerSocket->setSockOpt(\ZMQ::SOCKOPT_LINGER, 300000);
+        
         $this->bindRouterSocket($queues, $routerSocket);
 
         $this->logger->debug(getmypid() . ' 0MQ controller ready to receive');
@@ -103,6 +104,10 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         }
 
         $this->logger->debug(getmypid() . ' 0MQ controller exiting');
+        
+        $this->unbindQueues($queues, $pullSocket);
+        $this->unbindRouterSocket($queues, $routerSocket);
+        
         return 0;
     }
 
@@ -111,20 +116,8 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
      */
 
     private function bindQueues($queues, $socket) {
-
-        foreach ($queues as $queue) {
-            $options = $queue->getOptions();
-            if (!array_key_exists('zeromq_controller_socket', $options)) {
-                continue;
-            }
-            $endpoints[] = $options['zeromq_controller_socket'];
-        }
-
-        if (!isset($endpoints)) {
-            return;
-        }
-
-        $endpoints = array_unique($endpoints);
+        $endpoints = $this->endpoints($queues, 'zeromq_controller_socket');
+        
         foreach ($endpoints as $endpoint) {
             $this->logger->debug(getmypid() . ' 0MQ binding to ' . $endpoint);
             $socket->bind($endpoint);
@@ -134,19 +127,8 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     }
 
     private function bindRouterSocket($queues, $socket) {
-        foreach ($queues as $queue) {
-            $options = $queue->getOptions();
-            if (!array_key_exists('zeromq_worker_socket', $options)) {
-                continue;
-            }
-            $endpoints[] = $options['zeromq_worker_socket'];
-        }
-
-        if (!isset($endpoints)) {
-            return;
-        }
-
-        $endpoints = array_unique($endpoints);
+        $endpoints = $this->endpoints($queues, 'zeromq_worker_socket');
+        
         foreach ($endpoints as $endpoint) {
             $this->logger->debug(getmypid() . ' 0MQ binding to ' . $endpoint);
             $socket->bind($endpoint);
@@ -155,6 +137,48 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         return;
     }
 
+        /*
+     * Bind to all the queues using ZeroMQ
+     */
+
+    private function unbindQueues($queues, $socket) {
+        $endpoints = $this->endpoints($queues, 'zeromq_controller_socket');
+        
+        foreach ($endpoints as $endpoint) {
+            $this->logger->debug(getmypid() . ' 0MQ unbinding from ' . $endpoint);
+            $socket->unbind($endpoint);
+        }
+
+        return;
+    }
+
+    private function unbindRouterSocket($queues, $socket) {
+        $endpoints = $this->endpoints($queues, 'zeromq_worker_socket');
+        
+        foreach ($endpoints as $endpoint) {
+            $this->logger->debug(getmypid() . ' 0MQ unbinding from ' . $endpoint);
+            $socket->unbind($endpoint);
+        }
+
+        return;
+    }
+    /*
+     * Get array of endpoints from the queue options
+     */
+
+    private function endpoints($queues, $key) {
+        $endpoints = array();
+
+        foreach ($queues as $queue) {
+            $options = $queue->getOptions();
+            if (array_key_exists($key, $options)) {
+                $endpoints[] = $options[$key];
+            }
+        }
+
+        return array_unique($endpoints);
+    }
+    
     /*
      * Process any messages not delivered by ZeroMQ locally
      */

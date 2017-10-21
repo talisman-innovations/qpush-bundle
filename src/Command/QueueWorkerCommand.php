@@ -61,11 +61,10 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $this->connect($queues, $socket);
         $this->logger->debug(getmypid() . ' 0MQ ready to receive');
 
-        $socket->send('ready');
-        $this->logger->debug(getmypid() . ' 0MQ sent ready');
-        
         while (time() < $time) {
-               
+            $socket->send('ready');
+            $this->logger->debug(getmypid() . ' 0MQ sent ready');
+
             $notification = $socket->recv();
 
             if (!$notification) {
@@ -84,11 +83,10 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
 
             $this->logger->debug(getmypid() . ' 0MQ worker notification received ', [$notification]);
             $this->pollQueueOne($name, $id, $callable);
-            $socket->send('ready');
-            $this->logger->debug(getmypid() . ' 0MQ sent ready');
         }
 
         $this->logger->debug(getmypid() . ' 0MQ worker exiting');
+        $this->disconnect($queues, $socket);
         return 0;
     }
 
@@ -97,24 +95,42 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
      */
 
     private function connect($queues, $socket) {
-        foreach ($queues as $queue) {
-            $options = $queue->getOptions();
-            if (!array_key_exists('zeromq_worker_socket', $options)) {
-                continue;
-            }
-            $endpoints[] = $options['zeromq_worker_socket'];
-        }
-
-        if (!isset($endpoints)) {
-            return;
-        }
-
-        $endpoints = array_unique($endpoints);
+        $endpoints = $this->endpoints($queues);
 
         foreach ($endpoints as $endpoint) {
-            $this->logger->debug(getmypid() .' 0MQ binding to ', [$endpoint]);
+            $this->logger->debug(getmypid() . ' 0MQ connecting to ', [$endpoint]);
             $socket->connect($endpoint);
         }
+    }
+
+    /*
+     * Disconnect from the controller router socket
+     */
+
+    private function disconnect($queues, $socket) {
+        $endpoints = $this->endpoints($queues);
+
+        foreach ($endpoints as $endpoint) {
+            $this->logger->debug(getmypid() . ' 0MQ disconnecting from ', [$endpoint]);
+            $socket->disconnect($endpoint);
+        }
+    }
+
+    /*
+     * Get array of endpoints from the queue options
+     */
+
+    private function endpoints($queues) {
+        $endpoints = array();
+
+        foreach ($queues as $queue) {
+            $options = $queue->getOptions();
+            if (array_key_exists('zeromq_worker_socket', $options)) {
+                $endpoints[] = $options['zeromq_worker_socket'];
+            }
+        }
+
+        return array_unique($endpoints);
     }
 
     /*
