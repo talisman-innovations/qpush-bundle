@@ -15,7 +15,6 @@ use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Uecode\Bundle\QPushBundle\Event\Events;
 use Uecode\Bundle\QPushBundle\Event\MessageEvent;
-use Uecode\Bundle\QPushBundle\ZMQ\Zmsg;
 
 /**
  * @author Steven Brookes <steven.brookes@talisman-innovations.com>
@@ -239,12 +238,12 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         if (sscanf($notification, '%s %d', $name, $id) != 2) {
             $this->logger->debug('0MQ controller incorrect client message format', [$notification]);
-            continue;
+            return;
         }
 
         if (!$this->registry->has($name)) {
             $this->logger->debug('0MQ controller no such queue', [$name]);
-            continue;
+            return;
         }
 
         $eventName = $name . '.message_received';
