@@ -92,7 +92,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         while (true) {
             $events = $poll->poll($read, $write);
             
-            $this->logger->debug(getmypid() . ' 0MQ controller events received', $read);
+            $this->logger->debug(getmypid() . ' 0MQ controller events received', [$read, $write]);
             
             foreach ($read as $socket) {
                 if ($socket === $routerSocket) {
