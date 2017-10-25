@@ -98,9 +98,9 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
             
             foreach ($read as $socket) {
                 if ($socket === $routerSocket) {
-                    $this->processWorkerRequest($socket);
+                    $this->processWorkerRequest($routerSocket);
                 } elseif ($socket === $pullSocket) {
-                    $this->processClientRequest($socket);
+                    $this->processClientRequest($pullSocket, $routerSocket);
                 }
             }
         }
@@ -189,7 +189,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
      * Notify the worker process of a message to process
      */
 
-    private function processQueues() {
+    private function processQueues($socket) {
 
         $this->logger->debug('0MQ controller messageQueue', $this->messageQueue);
         $this->logger->debug('0MQ controller workerQueue', $this->workerQueue);
@@ -229,7 +229,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
                 $this->logger->debug('0MQ controller unknow worker state', [$state]);
                 break;
         }
-        $this->processQueues();
+        $this->processQueues($socket);
     }
 
     /*
@@ -238,9 +238,9 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
      * finally check if any messages to pass onto available workers
      */
 
-    private function processClientRequest($socket) {
+    private function processClientRequest($pullSocket, $routerSocket) {
 
-        $notification = $socket->recv();
+        $notification = $pullSocket->recv();
         $this->logger->debug('0MQ controller process client request', [$notification]);
         
         if (sscanf($notification, '%s %d', $name, $id) != 2) {
@@ -264,7 +264,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
             $this->messageQueue[] = sprintf('%s %d %s', $name, $id, $callable);
         }
 
-        $this->processQueues();
+        $this->processQueues($routerSocket);
     }
 
 }
