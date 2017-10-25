@@ -64,7 +64,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $this->logger->debug(getmypid() . ' 0MQ ready to receive');
 
         while (time() < $time) {
-            $socket->send('ready');
+            $socket->send('READY');
             $this->logger->debug(getmypid() . ' 0MQ sent ready');
 
             $notification = $socket->recv();
@@ -88,6 +88,8 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         }
 
         $this->logger->debug(getmypid() . ' 0MQ worker exiting');
+        
+        $socket->send('BUSY');        
         $this->disconnect($queues, $socket);
         return 0;
     }

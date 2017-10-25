@@ -15,6 +15,7 @@ use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Uecode\Bundle\QPushBundle\Event\Events;
 use Uecode\Bundle\QPushBundle\Event\MessageEvent;
+use Uecode\Bundle\QPushBundle\ZMQ\Zmsg;
 
 /**
  * @author Steven Brookes <steven.brookes@talisman-innovations.com>
@@ -25,9 +26,11 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     protected $registry;
     protected $logger;
     protected $output;
-    
+    protected $messageQueue = array();
+    protected $workerQueue = array();
+
     use \Uecode\Bundle\QPushBundle\Traits\EndpointTrait;
-    
+
     public function setContainer(ContainerInterface $container = null) {
 
         $this->container = $container;
@@ -78,38 +81,32 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         $routerSocket = new \ZMQSocket($context, \ZMQ::SOCKET_ROUTER);
         $routerSocket->setSockOpt(\ZMQ::SOCKOPT_LINGER, 300000);
-        
+
         $this->bindRouterSocket($queues, $routerSocket);
+
+        $poll = new \ZMQPoll();
+        $poll->add($routerSocket, ZMQ::POLL_IN);
+        $poll->add($frontend, ZMQ::POLL_IN);
 
         $this->logger->debug(getmypid() . ' 0MQ controller ready to receive');
 
-        while (time() < $time) {
-            $notification = $pullSocket->recv();
+        while (true) {
+            $events = $poll->poll($read, $write);
 
-            if ($notification) {
-                $this->logger->debug(getmypid() . ' 0MQ controller notification received', [$notification]);
-
-                if (sscanf($notification, '%s %d', $name, $id) != 2) {
-                    continue;
-                }
-
-                if (!$this->registry->has($name)) {
-                    $this->logger->debug(getmypid() . ' 0MQ controller no such queue', [$name]);
-                    continue;
-                }
-                $this->notifyWorkers($name, $id, $routerSocket);
-            } else {
-                foreach ($this->registry->all() as $queue) {
-                    $this->pollQueue($queue->getName(), $routerSocket);
+            foreach ($read as $socket) {
+                if ($socket === $routerSocket) {
+                    $this->processWorkerRequest($socket);
+                } elseif ($socket === $pullSocket) {
+                    $this->processClientRequest($socket);
                 }
             }
         }
 
         $this->logger->debug(getmypid() . ' 0MQ controller exiting');
-        
+
         $this->unbindQueues($queues, $pullSocket);
         $this->unbindRouterSocket($queues, $routerSocket);
-        
+
         return 0;
     }
 
@@ -119,7 +116,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
     private function bindQueues($queues, $socket) {
         $endpoints = $this->endpoints($queues, 'zeromq_controller_socket');
-        
+
         foreach ($endpoints as $endpoint) {
             $this->logger->debug(getmypid() . ' 0MQ binding to ' . $endpoint);
             $socket->bind($endpoint);
@@ -130,7 +127,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
     private function bindRouterSocket($queues, $socket) {
         $endpoints = $this->endpoints($queues, 'zeromq_worker_socket');
-        
+
         foreach ($endpoints as $endpoint) {
             $this->logger->debug(getmypid() . ' 0MQ binding to ' . $endpoint);
             $socket->bind($endpoint);
@@ -145,7 +142,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
     private function unbindQueues($queues, $socket) {
         $endpoints = $this->endpoints($queues, 'zeromq_controller_socket');
-        
+
         foreach ($endpoints as $endpoint) {
             $this->logger->debug(getmypid() . ' 0MQ unbinding from ' . $endpoint);
             $socket->unbind($endpoint);
@@ -156,7 +153,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
     private function unbindRouterSocket($queues, $socket) {
         $endpoints = $this->endpoints($queues, 'zeromq_worker_socket');
-        
+
         foreach ($endpoints as $endpoint) {
             $this->logger->debug(getmypid() . ' 0MQ unbinding from ' . $endpoint);
             $socket->unbind($endpoint);
@@ -164,7 +161,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         return;
     }
-    
+
     /*
      * Process any messages not delivered by ZeroMQ locally
      */
@@ -186,37 +183,82 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     }
 
     /*
-     * Get list of event listeners and notify workers for each listener
+     * Notify the worker process of a message to process
      */
 
-    private function notifyWorkers($name, $id, $socket) {
-        $eventName = $name . '.message_received';
-        $listeners = $this->dispatcher->getListeners($eventName);
+    private function processQueues() {
+        
+        $this->logger->debug('0MQ controller messageQueue', $this->messageQueue);
+        $this->logger->debug('0MQ controller workerQueue', $this->workerQueue);
 
-        foreach ($listeners as $listener) {
-            if ($this->dispatcher->getListenerPriority($eventName, $listener) >= 0) {
-                $this->notifyWorker($name, $id, $listener, $socket);
-            }
+        for ($i = 0; $i < min(count($this->workerQueue), count($this->messageQueue)); $i++) {
+            $address = array_shift($this->workerQueue);
+            $message = array_shift($this->messageQueue);
+            $this->logger->debug(getmypid() . ' 0MQ controller notify worker', [$address, $message]);
+            $socket->send($address, \ZMQ::MODE_SNDMORE);
+            $socket->send("", \ZMQ::MODE_SNDMORE);
+            $socket->send($message);
         }
     }
 
     /*
-     * Notify the worker process of a message to process
+     * Process a request from a workder
+     * READY - add it to the list of availabale workers
+     * BUSY - remove from list of available workers
+     * finally check if any messages to pass onto available workers
      */
 
-    private function notifyWorker($name, $id, $listener, $socket) {
-
+    private function processWorkerRequest($socket) {
         $address = $socket->recv();
-        $empty = $socket->recv();
-        $ready = $socket->recv();
+        $socket->recv();
+        $state = $socket->recv();
 
-        $callable = get_class($listener[0]) . '::' . $listener[1];
-        $notification = sprintf('%s %d %s', $name, $id, $callable);
+        switch ($state) {
+        case 'READY':
+        $this->workerQueue[] = $address;
+        break;
+        case 'BUSY':
+        unset($this->workerQueue[array_search($address, $this->workerQueue)]);
+        break;
+        default
+        $this->logger->debug('0MQ controller unknow worker state', [$state]);
+        break;
+        }
+        $this->processQueues();
+    }
 
-        $this->logger->debug(getmypid() . ' 0MQ controller notify worker', [$name, $id, $callable]);
-        $socket->send($address, \ZMQ::MODE_SNDMORE);
-        $socket->send("", \ZMQ::MODE_SNDMORE);
-        $socket->send($notification);
+    /*
+     * Process a request froma client
+     * Add a list of worker messages to the messgae queue
+     * finally check if any messages to pass onto available workers
+     */
+
+    private function processClientRequest($socket) {
+
+        $notification = $socket->recv();
+
+        if (sscanf($notification, '%s %d', $name, $id) != 2) {
+            $this->logger->debug('0MQ controller incorrect client message format', [$notification]);
+            continue;
+        }
+
+        if (!$this->registry->has($name)) {
+            $this->logger->debug('0MQ controller no such queue', [$name]);
+            continue;
+        }
+
+        $eventName = $name . '.message_received';
+        $listeners = $this->dispatcher->getListeners($eventName);
+
+        foreach ($listeners as $listener) {
+            if ($this->dispatcher->getListenerPriority($eventName, $listener) < 0) {
+                continue;
+            }
+            $callable = get_class($listener[0]) . '::' . $listener[1];
+            $this->messageQueue[] = sprintf('%s %d %s', $name, $id, $callable);
+        }
+
+        $this->processQueues();
     }
 
 }
