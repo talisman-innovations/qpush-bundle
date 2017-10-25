@@ -91,7 +91,9 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         while (true) {
             $events = $poll->poll($read, $write);
-
+            
+            $this->logger->debug(getmypid() . ' 0MQ controller events received', $read);
+            
             foreach ($read as $socket) {
                 if ($socket === $routerSocket) {
                     $this->processWorkerRequest($socket);
@@ -212,6 +214,8 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $socket->recv();
         $state = $socket->recv();
 
+        $this->logger->debug('0MQ controller process client request', [$address, $state]);
+        
         switch ($state) {
             case 'READY':
                 $this->workerQueue[] = $address;
@@ -235,7 +239,8 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     private function processClientRequest($socket) {
 
         $notification = $socket->recv();
-
+        $this->logger->debug('0MQ controller process client request', [$notification]);
+        
         if (sscanf($notification, '%s %d', $name, $id) != 2) {
             $this->logger->debug('0MQ controller incorrect client message format', [$notification]);
             return;
