@@ -187,7 +187,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
      */
 
     private function processQueues() {
-        
+
         $this->logger->debug('0MQ controller messageQueue', $this->messageQueue);
         $this->logger->debug('0MQ controller workerQueue', $this->workerQueue);
 
@@ -214,15 +214,15 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $state = $socket->recv();
 
         switch ($state) {
-        case 'READY':
-        $this->workerQueue[] = $address;
-        break;
-        case 'BUSY':
-        unset($this->workerQueue[array_search($address, $this->workerQueue)]);
-        break;
-        default
-        $this->logger->debug('0MQ controller unknow worker state', [$state]);
-        break;
+            case 'READY':
+                $this->workerQueue[] = $address;
+                break;
+            case 'BUSY':
+                unset($this->workerQueue[array_search($address, $this->workerQueue)]);
+                break;
+            default:
+                $this->logger->debug('0MQ controller unknow worker state', [$state]);
+                break;
         }
         $this->processQueues();
     }
