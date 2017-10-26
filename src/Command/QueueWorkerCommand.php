@@ -24,7 +24,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
     protected $output;
     protected $dispatcher;
     protected $registry;
-    
+
     use \Uecode\Bundle\QPushBundle\Traits\EndpointTrait;
 
     public function setContainer(ContainerInterface $container = null) {
@@ -48,6 +48,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $this->registry = $this->container->get('uecode_qpush');
 
         $time = ($input->getOption('time') === null) ? PHP_INT_MAX : time() + $input->getOption('time');
+        $check = ($input->getOption('time') === null) ? -1 : $input->getOption('time') * 1000;
 
         $queues = $this->registry->all();
 
@@ -61,35 +62,54 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         }
 
         $this->connect($queues, $socket);
+        $poll = new \ZMQPoll();
+        $poll->add($socket, \ZMQ::POLL_IN);
+
+        $read = $write = array();
+
         $this->logger->debug(getmypid() . ' 0MQ ready to receive');
 
         while (time() < $time) {
             $socket->send('READY');
             $this->logger->debug(getmypid() . ' 0MQ sent ready');
 
-            $notification = $socket->recv();
+            try {
+                $events = $poll->poll($read, $write, $check);
+                $errors = $poll->getLastErrors();
 
-            if (!$notification) {
+                if (count($errors) > 0) {
+                    $this->logger->error('Error polling', $errors);
+                }
+            } catch (ZMQPollException $e) {
+                $this->logger->error('Exception polling', [$e->getMessage()]);
+            }
+
+            if ($events == 0) {
                 continue;
             }
 
-            if (sscanf($notification, '%s %d %s', $name, $id, $callable) != 3) {
-                $this->logger->error(getmypid() . ' 0MQ worker incorrect notification format', [$notification]);
-                return;
-            }
+            foreach ($read as $socket) {
+                
+                $notification = $socket->recv();
+                
+                if (sscanf($notification, '%s %d %s', $name, $id, $callable) != 3) {
+                    $this->logger->error(getmypid() . ' 0MQ worker incorrect notification format', [$notification]);
+                    return;
+                }
 
-            if (!$this->registry->has($name)) {
-                $this->logger->error(getmypid() . ' 0MQ worker no such queue', [$name]);
-                return;
-            }
+                if (!$this->registry->has($name)) {
+                    $this->logger->error(getmypid() . ' 0MQ worker no such queue', [$name]);
+                    return;
+                }
 
-            $this->logger->debug(getmypid() . ' 0MQ worker notification received ', [$notification]);
-            $this->pollQueueOne($name, $id, $callable);
+                $this->logger->debug(getmypid() . ' 0MQ worker notification received ', [$notification]);
+                $this->pollQueueOne($name, $id, $callable);
+            }
         }
 
         $this->logger->debug(getmypid() . ' 0MQ worker exiting');
-        
-        $socket->send('BUSY');        
+
+        $socket->send('BUSY');
         $this->disconnect($queues, $socket);
         return 0;
     }
@@ -99,7 +119,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
      */
 
     private function connect($queues, $socket) {
-        $endpoints = $this->endpoints($queues,'zeromq_worker_socket');
+        $endpoints = $this->endpoints($queues, 'zeromq_worker_socket');
 
         foreach ($endpoints as $endpoint) {
             $this->logger->debug(getmypid() . ' 0MQ connecting to ', [$endpoint]);
@@ -112,7 +132,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
      */
 
     private function disconnect($queues, $socket) {
-        $endpoints = $this->endpoints($queues,'zeromq_worker_socket');
+        $endpoints = $this->endpoints($queues, 'zeromq_worker_socket');
 
         foreach ($endpoints as $endpoint) {
             $this->logger->debug(getmypid() . ' 0MQ disconnecting from ', [$endpoint]);
