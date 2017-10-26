@@ -56,6 +56,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $socket = new \ZMQSocket($context, \ZMQ::SOCKET_REQ);
         $socket->setSockOpt(\ZMQ::SOCKOPT_IDENTITY, getmypid());
         $socket->setSockOpt(\ZMQ::SOCKOPT_LINGER, 0);
+        $socket->setSockOpt(\ZMQ::SOCKOPT_REQ_RELAXED, 1);
 
         if ($input->getOption('time')) {
             $socket->setSockOpt(\ZMQ::SOCKOPT_RCVTIMEO, $input->getOption('time') * 1000);
