@@ -57,17 +57,17 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     protected function execute(InputInterface $input, OutputInterface $output) {
         $this->output = $output;
 
-        $name = $input->getArgument('name');
+        $queue = $input->getArgument('name');
         $time = ($input->getOption('time') === null) ? PHP_INT_MAX : time() + $input->getOption('time');
         $check = ($input->getOption('check') === null) ? 60000 : $input->getOption('check') * 1000;
 
-        if ($name !== null && !$this->registry->has($name)) {
-            $msg = sprintf("The [%s] queue you have specified does not exist!", $name);
+        if ($queue !== null && !$this->registry->has($queue)) {
+            $msg = sprintf("The [%s] queue you have specified does not exist!", $queue);
             return $output->writeln($msg);
         }
 
-        if ($name !== null) {
-            $queues[] = $this->registry->get($name);
+        if ($queue !== null) {
+            $queues[] = $this->registry->get($queue);
         } else {
             $queues = $this->registry->all();
         }
@@ -86,22 +86,39 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $poll = new \ZMQPoll();
         $poll->add($routerSocket, \ZMQ::POLL_IN);
         $poll->add($pullSocket, \ZMQ::POLL_IN);
-        
+
         $read = $write = array();
 
         $this->logger->debug(getmypid() . ' 0MQ controller ready to receive');
 
-        while (true) {
-            $events = $poll->poll($read, $write, $check);
-            
-            $this->logger->debug(getmypid() . ' 0MQ controller events received', [$read, $write]);
-            
-            foreach ($read as $socket) {
-                if ($socket === $routerSocket) {
-                    $this->processWorkerRequest($routerSocket);
-                } elseif ($socket === $pullSocket) {
-                    $this->processClientRequest($pullSocket, $routerSocket);
+        while (time() < $time || count($this->messageQueue) > 0) {
+
+            try {
+                $events = $poll->poll($read, $write, $check);
+                $errors = $poll->getLastErrors();
+
+                if (count($errors) > 0) {
+                    $this->logger->error('Error polling', $errors);
                 }
+            } catch (ZMQPollException $e) {
+                $this->logger->error('Exception polling', [$e->getMessage()]);
+            }
+
+            $this->logger->debug(getmypid() . ' 0MQ controller poll complete', [$read, $write]);
+
+            if ($events > 0) {
+                foreach ($read as $socket) {
+                    if ($socket === $routerSocket) {
+                        $this->processWorkerRequest($routerSocket);
+                    } elseif ($socket === $pullSocket) {
+                        $this->processClientRequest($pullSocket, $routerSocket);
+                    }
+                }
+            } else {
+                foreach ($this->registry->all() as $queue) {
+                    $this->pollQueue($queue->getName());
+                }
+                $this->processQueues($routerSocket);
             }
         }
 
@@ -166,19 +183,18 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     }
 
     /*
-     * Process any messages not delivered by ZeroMQ locally
+     * Process any messages not delivered by ZeroMQ locally from a queue
      */
 
-    private function pollQueue($name) {
+    private function pollQueue($queue) {
 
-        $messages = $this->registry->get($name)->receive();
+        $messages = $this->registry->get($queue)->receive();
 
         foreach ($messages as $message) {
-            $messageEvent = new MessageEvent($name, $message);
-            $this->dispatcher->dispatch(Events::Message($name), $messageEvent);
+            $this->addMessagesToQueue($queue, $message->getId());
         }
 
-        $msg = sprintf('Polling Queue %s, %d messages fetched', $name, sizeof($messages));
+        $msg = sprintf('Polling Queue %s, %d messages fetched', $queue, sizeof($messages));
         $this->logger->debug($msg);
         $this->output->writeln($msg);
 
@@ -216,11 +232,12 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $socket->recv();
         $state = $socket->recv();
 
-        $this->logger->debug('0MQ controller process client request', [$address, $state]);
-        
+        $this->logger->debug('0MQ controller process worker request', [$address, $state]);
+
         switch ($state) {
             case 'READY':
                 $this->workerQueue[] = $address;
+                $this->workerQueue = array_unique($this->workerQueue);
                 break;
             case 'BUSY':
                 unset($this->workerQueue[array_search($address, $this->workerQueue)]);
@@ -242,18 +259,28 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         $notification = $pullSocket->recv();
         $this->logger->debug('0MQ controller process client request', [$notification]);
-        
-        if (sscanf($notification, '%s %d', $name, $id) != 2) {
+
+        if (sscanf($notification, '%s %d', $queue, $id) != 2) {
             $this->logger->debug('0MQ controller incorrect client message format', [$notification]);
             return;
         }
 
-        if (!$this->registry->has($name)) {
-            $this->logger->debug('0MQ controller no such queue', [$name]);
+        if (!$this->registry->has($queue)) {
+            $this->logger->debug('0MQ controller no such queue', [$queue]);
             return;
         }
 
-        $eventName = $name . '.message_received';
+        $this->addMessagesToQueue($queue, $id);
+        $this->processQueues($routerSocket);
+    }
+
+    /*
+     * Work out the listeners of the queue and add one message per listener
+     * to the worker queue
+     */
+
+    private function addMessagesToQueue($queue, $id) {
+        $eventName = $queue . '.message_received';
         $listeners = $this->dispatcher->getListeners($eventName);
 
         foreach ($listeners as $listener) {
@@ -261,10 +288,8 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
                 continue;
             }
             $callable = get_class($listener[0]) . '::' . $listener[1];
-            $this->messageQueue[] = sprintf('%s %d %s', $name, $id, $callable);
+            $this->messageQueue[] = sprintf('%s %d %s', $queue, $id, $callable);
         }
-
-        $this->processQueues($routerSocket);
     }
 
 }
