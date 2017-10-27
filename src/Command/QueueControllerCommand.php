@@ -240,10 +240,11 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
                 $this->workerQueue = array_unique($this->workerQueue);
                 break;
             case 'BUSY':
+                $this->workerQueue = array_unique($this->workerQueue);
                 unset($this->workerQueue[array_search($address, $this->workerQueue)]);
                 break;
             default:
-                $this->logger->debug('0MQ controller unknow worker state', [$state]);
+                $this->logger->debug('0MQ controller unknown worker state', [$state]);
                 break;
         }
         $this->processQueues($socket);

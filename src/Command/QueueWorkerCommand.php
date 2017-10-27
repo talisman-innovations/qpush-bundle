@@ -48,7 +48,6 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $this->registry = $this->container->get('uecode_qpush');
 
         $time = ($input->getOption('time') === null) ? PHP_INT_MAX : time() + $input->getOption('time');
-        $check = ($input->getOption('time') === null) ? -1 : $input->getOption('time') * 1000;
 
         $queues = $this->registry->all();
 
@@ -56,11 +55,6 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $socket = new \ZMQSocket($context, \ZMQ::SOCKET_REQ);
         $socket->setSockOpt(\ZMQ::SOCKOPT_IDENTITY, getmypid());
         $socket->setSockOpt(\ZMQ::SOCKOPT_LINGER, 0);
-        $socket->setSockOpt(\ZMQ::SOCKOPT_REQ_RELAXED, 1);
-
-        if ($input->getOption('time')) {
-            $socket->setSockOpt(\ZMQ::SOCKOPT_RCVTIMEO, $input->getOption('time') * 1000);
-        }
 
         $this->connect($queues, $socket);
         $poll = new \ZMQPoll();
@@ -75,7 +69,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
             $this->logger->debug(getmypid() . ' 0MQ sent ready');
 
             try {
-                $events = $poll->poll($read, $write, $check);
+                $poll->poll($read, $write);
                 $errors = $poll->getLastErrors();
 
                 if (count($errors) > 0) {
@@ -85,22 +79,18 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
                 $this->logger->error('Exception polling', [$e->getMessage()]);
             }
 
-            if ($events == 0) {
-                continue;
-            }
-
             foreach ($read as $socket) {
                 
                 $notification = $socket->recv();
                 
                 if (sscanf($notification, '%s %d %s', $name, $id, $callable) != 3) {
                     $this->logger->error(getmypid() . ' 0MQ worker incorrect notification format', [$notification]);
-                    return;
+                    continue;
                 }
 
                 if (!$this->registry->has($name)) {
                     $this->logger->error(getmypid() . ' 0MQ worker no such queue', [$name]);
-                    return;
+                    continue;
                 }
 
                 $this->logger->debug(getmypid() . ' 0MQ worker notification received ', [$notification]);
@@ -109,8 +99,6 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         }
 
         $this->logger->debug(getmypid() . ' 0MQ worker exiting');
-
-        $socket->send('BUSY');
         $this->disconnect($queues, $socket);
         return 0;
     }
