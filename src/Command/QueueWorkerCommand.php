@@ -24,6 +24,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
     protected $output;
     protected $dispatcher;
     protected $registry;
+    protected $stop;
 
     use \Uecode\Bundle\QPushBundle\Traits\EndpointTrait;
 
@@ -46,6 +47,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         $this->logger = $this->container->get('logger');
         $this->dispatcher = $this->container->get('event_dispatcher');
         $this->registry = $this->container->get('uecode_qpush');
+        $this->stop = false;
 
         $time = ($input->getOption('time') === null) ? PHP_INT_MAX : time() + $input->getOption('time');
 
@@ -64,7 +66,7 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
 
         $this->logger->debug(getmypid() . ' 0MQ ready to receive');
 
-        while (time() < $time) {
+        while (time() < $time && $this->stop === false) {
             $socket->send('READY');
             $this->logger->debug(getmypid() . ' 0MQ sent ready');
 
@@ -79,10 +81,13 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
                 $this->logger->error('Exception polling', [$e->getMessage()]);
             }
 
+            pcntl_signal(SIGTERM, [$this, 'stopCommand']);
+            pcntl_signal(SIGINT, [$this, 'stopCommand']);
+            
             foreach ($read as $socket) {
-                
+
                 $notification = $socket->recv();
-                
+
                 if (sscanf($notification, '%s %d %s', $name, $id, $callable) != 3) {
                     $this->logger->error(getmypid() . ' 0MQ worker incorrect notification format', [$notification]);
                     continue;
@@ -96,11 +101,22 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
                 $this->logger->debug(getmypid() . ' 0MQ worker notification received ', [$notification]);
                 $this->pollQueueOne($name, $id, $callable);
             }
+            
+            pcntl_signal(SIGTERM, SIG_DFL);
+            pcntl_signal(SIGINT, SIG_DFL);
         }
 
         $this->logger->debug(getmypid() . ' 0MQ worker exiting');
         $this->disconnect($queues, $socket);
         return 0;
+    }
+
+    /*
+     * Stop gracefully if interrupted
+     */
+
+    protected function stopCommand() {
+        $this->stop = true;
     }
 
     /*
@@ -137,7 +153,8 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
 
         $eventName = $name . '.message_received';
         if (!$listener = $this->findListener($eventName, $callable)) {
-            return 0;
+            $this->logger->error('No listener found', [$eventName, $callable]);
+            return;
         }
 
         $queue = $this->registry->get($name);
@@ -153,9 +170,8 @@ class QueueWorkerCommand extends Command implements ContainerAwareInterface {
         }
 
         $queue->storeResult($id, $callable, $result);
-        unset($message, $messageEvent);
 
-        return 1;
+        return;
     }
 
     private function findListener($eventName, $callable) {

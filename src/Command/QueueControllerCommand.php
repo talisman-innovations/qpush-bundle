@@ -13,8 +13,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\DependencyInjection\ContainerAwareInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
-use Uecode\Bundle\QPushBundle\Event\Events;
-use Uecode\Bundle\QPushBundle\Event\MessageEvent;
 
 /**
  * @author Steven Brookes <steven.brookes@talisman-innovations.com>
@@ -25,6 +23,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
     protected $registry;
     protected $logger;
     protected $output;
+    protected $stop;
     protected $messageQueue = array();
     protected $workerQueue = array();
 
@@ -46,9 +45,6 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
                         'name', InputArgument::OPTIONAL, 'Name of a specific queue to poll'
                 )
                 ->addOption(
-                        'time', 't', InputOption::VALUE_OPTIONAL, 'Time to run before exit (seconds)'
-                )
-                ->addOption(
                         'check', 'c', InputOption::VALUE_OPTIONAL, 'Check all queues every (seconds)'
                 )
         ;
@@ -58,8 +54,8 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $this->output = $output;
 
         $queue = $input->getArgument('name');
-        $time = ($input->getOption('time') === null) ? PHP_INT_MAX : time() + $input->getOption('time');
         $check = ($input->getOption('check') === null) ? 60000 : $input->getOption('check') * 1000;
+        $this->stop = false;
 
         if ($queue !== null && !$this->registry->has($queue)) {
             $msg = sprintf("The [%s] queue you have specified does not exist!", $queue);
@@ -91,7 +87,7 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
 
         $this->logger->debug(getmypid() . ' 0MQ controller ready to receive');
 
-        while (time() < $time || count($this->messageQueue) > 0) {
+        while ($this->stop === false || count($this->messageQueue) > 0) {
 
             try {
                 $events = $poll->poll($read, $write, $check);
@@ -105,6 +101,9 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
             }
 
             $this->logger->debug(getmypid() . ' 0MQ controller poll complete', [$read, $write]);
+
+            pcntl_signal(SIGTERM, [$this, 'stopCommand']);
+            pcntl_signal(SIGINT, [$this, 'stopCommand']);
 
             if ($events > 0) {
                 foreach ($read as $socket) {
@@ -120,6 +119,9 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
                 }
                 $this->processQueues($routerSocket);
             }
+
+            pcntl_signal(SIGTERM, SIG_DFL);
+            pcntl_signal(SIGINT, SIG_DFL);
         }
 
         $this->logger->debug(getmypid() . ' 0MQ controller exiting');
@@ -128,6 +130,14 @@ class QueueControllerCommand extends Command implements ContainerAwareInterface 
         $this->unbindRouterSocket($queues, $routerSocket);
 
         return 0;
+    }
+
+    /*
+     * Stop gracefully if interrupted
+     */
+
+    protected function stopCommand() {
+        $this->stop = true;
     }
 
     /*
