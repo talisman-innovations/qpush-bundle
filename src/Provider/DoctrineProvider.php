@@ -248,7 +248,7 @@ class DoctrineProvider extends AbstractProvider {
                     break;
                 case 'sourceId':
                     $qb->andWhere('MATCH(p.message) AGAINST(:contains boolean) > 0');
-                    $qb->setParameter('contains', 'sourceId+'.$data['search']);
+                    $qb->setParameter('contains', 'sourceId +'.$data['search']);
                     break;
                 default :
                     $qb->andWhere('p.' . $field . ' = :equals');
