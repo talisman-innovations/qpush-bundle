@@ -13,5 +13,6 @@ services:
       
     Uecode\Bundle\QPushBundle\Command\:
         resource: '../../Command'
-        
+        tags: ['console.command']
+
     Uecode\Bundle\QPushBundle\Provider\ProviderRegistry: '@uecode_qpush.registry'   
