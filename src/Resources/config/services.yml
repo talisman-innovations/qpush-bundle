@@ -10,3 +10,8 @@ services:
         class: Doctrine\Common\Cache\PhpFileCache
         arguments: ['%kernel.cache_dir%/qpush', qpush.php]
         public: false
+      
+    Uecode\Bundle\QPushBundle\Command\:
+        resource: '../../Command'
+        
+    Uecode\Bundle\QPushBundle\Provider\ProviderRegistry: '@uecode_qpush.registry'   
