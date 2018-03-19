@@ -56,7 +56,7 @@ class DoctrineProvider extends AbstractProvider {
         $this->repository = $this->em->getRepository(self::$entityName);
 
         if (class_exists('\ZMQ') &&
-                array_key_exists('zeromq_controller_socket', $this->options)) {
+            array_key_exists('zeromq_controller_socket', $this->options)) {
             $this->context = new \ZMQContext();
             $this->sender = new \ZMQSocket($this->context, \ZMQ::SOCKET_PUSH);
             $this->sender->connect($this->options['zeromq_controller_socket']);
@@ -74,7 +74,7 @@ class DoctrineProvider extends AbstractProvider {
 
     /**
      * Get repository
-     * 
+     *
      * @return array
      */
     public function getRepository() {
@@ -88,7 +88,7 @@ class DoctrineProvider extends AbstractProvider {
     /**
      * Creates the Queue
      * Checks to see if the underlying table has been created or not
-     * 
+     *
      * @return bool
      */
     public function create() {
@@ -110,11 +110,24 @@ class DoctrineProvider extends AbstractProvider {
      */
     public function publish(array $message, array $options = []) {
 
+        if (empty($options))
+        {
+            throw new \Exception('No tenant id');
+        }
+
+        if (!is_int($options[0]))
+        {
+            throw new \Exception('Tenant id is not an integer');
+        }
+
+        $tenantId = $options[0];
+
         $doctrineMessage = new DoctrineMessage();
         $doctrineMessage->setQueue($this->name)
-                ->setDelivered(false)
-                ->setMessage($message)
-                ->setLength(strlen(serialize($message)));
+            ->setDelivered(false)
+            ->setMessage($message)
+            ->setLength(strlen(serialize($message)))
+            ->setTenantId($tenantId);
 
         $this->em->persist($doctrineMessage);
         $this->em->flush();
@@ -156,12 +169,12 @@ class DoctrineProvider extends AbstractProvider {
     public function receive(array $options = []) {
 
         $doctrineMessages = $this->repository->findBy(
-                array('delivered' => false, 'queue' => $this->name), array('id' => 'ASC')
+            array('delivered' => false, 'queue' => $this->name), array('id' => 'ASC')
         );
 
         $messages = [];
         foreach ($doctrineMessages as $doctrineMessage) {
-            $messages[] = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(), []);
+            $messages[] = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(), ['tenantId' => $doctrineMessage->getTenantId()]);
             $doctrineMessage->setDelivered(true);
         }
         $this->em->flush();
@@ -171,16 +184,16 @@ class DoctrineProvider extends AbstractProvider {
 
     /*
      * Receive a single message from the Queue
-     * 
+     *
      * @param $id ID of the message to receieve
-     * 
-     * @return Message 
+     *
+     * @return Message
      */
 
     public function receiveOne($id) {
 
         $doctrineMessage = $this->getById($id);
-        $message = new Message($id, $doctrineMessage->getMessage(), []);
+        $message = new Message($id, $doctrineMessage->getMessage(), ['tenantId' => $doctrineMessage->getTenantId()]);
         $doctrineMessage->setDelivered(true);
         $this->em->flush();
         return $message;
@@ -216,9 +229,9 @@ class DoctrineProvider extends AbstractProvider {
 
     /**
      * Returns a specific message
-     * 
+     *
      * @param integer $id
-     * 
+     *
      * @return Message
      */
     public function getById($id) {
@@ -227,10 +240,10 @@ class DoctrineProvider extends AbstractProvider {
 
     /**
      * Returns a query of the message queue
-     * 
+     *
      * @param array $data ['field'=>'id', 'search'=>'text', 'to'=>date, from=>date]
      * @return Query
-     * 
+     *
      */
     public function findBy($data) {
         $qb = $this->repository->createQueryBuilder('p');
@@ -255,7 +268,7 @@ class DoctrineProvider extends AbstractProvider {
                     $qb->setParameter('equals', $data['search']);
                     break;
             }
-         
+
         }
 
         if (isset($data['from']) && $data['from'] !== null && isset($data['to']) && $data['to'] !== null) {
@@ -280,7 +293,7 @@ class DoctrineProvider extends AbstractProvider {
             $period = self::DEFAULT_PERIOD;
         }
         $sql = 'SELECT from_unixtime(floor(unix_timestamp(created)/'
-                . $period . ') * ' . $period . ') as time, 
+            . $period . ') * ' . $period . ') as time, 
             count(*) as count 
             FROM uecode_qpush_message
             where queue = "' . $this->name . '"';
@@ -336,3 +349,4 @@ class DoctrineProvider extends AbstractProvider {
     }
 
 }
+

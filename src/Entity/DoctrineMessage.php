@@ -38,9 +38,9 @@ use Doctrine\Common\Collections\ArrayCollection as ArrayCollection;
 class DoctrineMessage {
 
     /**
-     * @ORM\Id 
-     * @ORM\GeneratedValue 
-     * @ORM\Column(type="integer") 
+     * @ORM\Id
+     * @ORM\GeneratedValue
+     * @ORM\Column(type="integer")
      */
     private $id;
 
@@ -79,9 +79,15 @@ class DoctrineMessage {
     private $message;
 
     /**
-     * @ORM\Column(type="integer") 
+     * @ORM\Column(type="integer")
      */
     private $length;
+
+    /**
+     *
+     * @ORM\Column(name="tenant_id", type="integer")
+     */
+    private $tenantId;
 
     /**
      * @ORM\OneToMany(targetEntity="DoctrineMessageResult", mappedBy="message")
@@ -91,11 +97,11 @@ class DoctrineMessage {
     /*
      * Constructor
      */
-    
+
     public function __construct() {
         $this->results = new ArrayCollection();
     }
-  
+
     function getId() {
         return $this->id;
     }
@@ -122,6 +128,10 @@ class DoctrineMessage {
 
     function getLength() {
         return $this->length;
+    }
+
+    function getTenantId() {
+        return $this->tenantId;
     }
 
     function getResults() {
@@ -162,6 +172,11 @@ class DoctrineMessage {
         return $this;
     }
 
+    function setTenantId($tenantId) {
+        $this->tenantId = $tenantId;
+        return $this;
+    }
+
     function setResults($results) {
         $this->results = $results;
         return $this;
@@ -169,3 +184,4 @@ class DoctrineMessage {
 
 
 }
+
