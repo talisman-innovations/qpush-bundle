@@ -107,20 +107,17 @@ class DoctrineProvider extends AbstractProvider {
      * @param array $options An array of options that override the queue defaults
      *
      * @return string
+     *
+     * @throws \Exception
      */
     public function publish(array $message, array $options = []) {
 
-        if (empty($options))
+        if (empty($options) || empty($options['tenantId']))
         {
             throw new \Exception('No tenant id');
         }
 
-        if (!is_int($options[0]))
-        {
-            throw new \Exception('Tenant id is not an integer');
-        }
-
-        $tenantId = $options[0];
+        $tenantId = $options['tenantId'];
 
         $doctrineMessage = new DoctrineMessage();
         $doctrineMessage->setQueue($this->name)
