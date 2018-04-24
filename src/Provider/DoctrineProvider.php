@@ -112,19 +112,11 @@ class DoctrineProvider extends AbstractProvider {
      */
     public function publish(array $message, array $options = []) {
 
-        if (empty($options) || empty($options['tenantId']))
-        {
-            throw new \Exception('No tenant id');
-        }
-
-        $tenantId = $options['tenantId'];
-
         $doctrineMessage = new DoctrineMessage();
         $doctrineMessage->setQueue($this->name)
             ->setDelivered(false)
             ->setMessage($message)
-            ->setLength(strlen(serialize($message)))
-            ->setTenantId($tenantId);
+            ->setLength(strlen(serialize($message)));
 
         $this->em->persist($doctrineMessage);
         $this->em->flush();
@@ -171,7 +163,7 @@ class DoctrineProvider extends AbstractProvider {
 
         $messages = [];
         foreach ($doctrineMessages as $doctrineMessage) {
-            $messages[] = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(), ['tenantId' => $doctrineMessage->getTenantId()]);
+            $messages[] = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(), ['tenantId' => $doctrineMessage->getTenantId(), 'transactionId' => $doctrineMessage->getTransactionId()]);
             $doctrineMessage->setDelivered(true);
         }
         $this->em->flush();
@@ -190,7 +182,7 @@ class DoctrineProvider extends AbstractProvider {
     public function receiveOne($id) {
 
         $doctrineMessage = $this->getById($id);
-        $message = new Message($id, $doctrineMessage->getMessage(), ['tenantId' => $doctrineMessage->getTenantId()]);
+        $message = new Message($id, $doctrineMessage->getMessage(), ['tenantId' => $doctrineMessage->getTenantId(), 'transactionId' => $doctrineMessage->getTransactionId()]);
         $doctrineMessage->setDelivered(true);
         $this->em->flush();
         return $message;

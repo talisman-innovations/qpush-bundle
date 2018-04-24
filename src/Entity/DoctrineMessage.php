@@ -26,6 +26,10 @@ use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\Mapping\Index as Index;
 use Gedmo\Mapping\Annotation as Gedmo;
 use Doctrine\Common\Collections\ArrayCollection as ArrayCollection;
+use Talisman\TideBundle\Interfaces\TenantInterface;
+use Talisman\TideBundle\Interfaces\TransactionInterface;
+use Talisman\TideBundle\Traits\TenantTrait;
+use Talisman\TideBundle\Traits\TransactionTrait;
 
 /**
  * @ORM\Entity
@@ -35,7 +39,8 @@ use Doctrine\Common\Collections\ArrayCollection as ArrayCollection;
  *          @ORM\Index(name="uecode_qpush_created_idx",columns={"created"}),
  *          @ORM\Index(name="uecode_qpush_message_idx",columns={"message"}, flags={"fulltext"})})
  */
-class DoctrineMessage {
+class DoctrineMessage implements TenantInterface, TransactionInterface
+{
 
     /**
      * @ORM\Id
@@ -84,15 +89,12 @@ class DoctrineMessage {
     private $length;
 
     /**
-     *
-     * @ORM\Column(name="tenant_id", type="integer")
-     */
-    private $tenantId;
-
-    /**
      * @ORM\OneToMany(targetEntity="DoctrineMessageResult", mappedBy="message")
      */
     private $results;
+
+    use TenantTrait;
+    use TransactionTrait;
 
     /*
      * Constructor
@@ -130,10 +132,6 @@ class DoctrineMessage {
         return $this->length;
     }
 
-    function getTenantId() {
-        return $this->tenantId;
-    }
-
     function getResults() {
         return $this->results;
     }
@@ -169,11 +167,6 @@ class DoctrineMessage {
 
     function setLength($length) {
         $this->length = $length;
-        return $this;
-    }
-
-    function setTenantId($tenantId) {
-        $this->tenantId = $tenantId;
         return $this;
     }
 
