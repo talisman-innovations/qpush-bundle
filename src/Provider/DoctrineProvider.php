@@ -310,11 +310,14 @@ class DoctrineProvider extends AbstractProvider {
     public function redeliver($id) {
 
         $message = $this->repository->find($id);
+        $tenantId = $message->getTenantId();
+        $transactionId = $message->getTransactionId();
+        
         $message->setDelivered(false);
         $this->em->flush();
 
         if (isset($this->sender)) {
-            $this->push($this->sender, $this->name, $id);
+            $this->push($this->sender, $this->name, $id, $tenantId, $transactionId);
         }
 
         return (string) $id;
