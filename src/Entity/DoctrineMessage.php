@@ -37,10 +37,13 @@ use Talisman\TideBundle\Traits\TransactionTrait;
  * indexes={@ORM\Index(name="uecode_qpush_queue_idx",columns={"queue"}),
  *          @ORM\Index(name="uecode_qpush_delivered_idx",columns={"delivered"}),
  *          @ORM\Index(name="uecode_qpush_created_idx",columns={"created"}),
- *          @ORM\Index(name="uecode_qpush_message_idx",columns={"message"}, flags={"fulltext"})})
+ *          @ORM\Index(name="uecode_qpush_message_idx",columns={"message"}, flags={"fulltext"}),
+ *          @ORM\Index(name="uecode_qpush_transaction_id_idx", columns={"transaction_id"})
+ *         })
  */
 class DoctrineMessage implements TenantInterface, TransactionInterface
 {
+    use TransactionTrait;
 
     /**
      * @ORM\Id
@@ -93,8 +96,30 @@ class DoctrineMessage implements TenantInterface, TransactionInterface
      */
     private $results;
 
-    use TenantTrait;
-    use TransactionTrait;
+    /**
+     * @ORM\Column(name="tenant_id", type="integer", nullable=true)
+     */
+    private $tenantId;
+
+    /**
+     * @return int
+     */
+    public function getTenantId()
+    {
+        return $this->tenantId;
+    }
+
+    /**
+     * @param int $tenantId
+     *
+     * @return $this
+     */
+    public function setTenantId($tenantId)
+    {
+        $this->tenantId = $tenantId;
+
+        return $this;
+    }
 
     /*
      * Constructor
