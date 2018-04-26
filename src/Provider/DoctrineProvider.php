@@ -121,9 +121,11 @@ class DoctrineProvider extends AbstractProvider {
         $this->em->persist($doctrineMessage);
         $this->em->flush();
         $id = $doctrineMessage->getId();
+        $tenantId = $doctrineMessage->getTenantId();
+        $transactionId = $doctrineMessage->getTransactionId();
 
         if (isset($this->sender)) {
-            $this->push($this->sender, $this->name, $id);
+            $this->push($this->sender, $this->name, $id, $tenantId, $transactionId);
         }
 
         return (string) $id;
@@ -136,9 +138,9 @@ class DoctrineProvider extends AbstractProvider {
      * @param string $name The name of the queue
      * @param integer $id  The ID os the message
      */
-    protected function push($sender, $name, $id) {
+    protected function push($sender, $name, $id, $tenantId, $transactionId) {
 
-        $notification = sprintf('%s %d', $name, $id);
+        $notification = sprintf('%s %d %d %s', $name, $id, $tenantId, $transactionId);
         $sender->send($notification);
         $this->logger->debug('Completed 0MQ message', [$notification]);
     }
@@ -308,11 +310,14 @@ class DoctrineProvider extends AbstractProvider {
     public function redeliver($id) {
 
         $message = $this->repository->find($id);
+        $tenantId = $message->getTenantId();
+        $transactionId = $message->getTransactionId();
+        
         $message->setDelivered(false);
         $this->em->flush();
 
         if (isset($this->sender)) {
-            $this->push($this->sender, $this->name, $id);
+            $this->push($this->sender, $this->name, $id, $tenantId, $transactionId);
         }
 
         return (string) $id;
