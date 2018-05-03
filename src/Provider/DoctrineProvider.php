@@ -31,6 +31,8 @@ use Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult;
 class DoctrineProvider extends AbstractProvider {
 
     const DEFAULT_PERIOD = 300;
+    const METADATA_TENANT_ID = 'tenantId';
+    const METADATA_TRANSACTION_ID = 'transactionId';
 
     protected $em;
     protected $repository;
@@ -165,7 +167,9 @@ class DoctrineProvider extends AbstractProvider {
 
         $messages = [];
         foreach ($doctrineMessages as $doctrineMessage) {
-            $messages[] = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(), ['tenantId' => $doctrineMessage->getTenantId(), 'transactionId' => $doctrineMessage->getTransactionId()]);
+            $messages[] = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(),
+                [self::METADATA_TENANT_ID => $doctrineMessage->getTenantId(),
+                    self::METADATA_TRANSACTION_ID => $doctrineMessage->getTransactionId()]);
             $doctrineMessage->setDelivered(true);
         }
         $this->em->flush();
@@ -184,7 +188,9 @@ class DoctrineProvider extends AbstractProvider {
     public function receiveOne($id) {
 
         $doctrineMessage = $this->getById($id);
-        $message = new Message($id, $doctrineMessage->getMessage(), ['tenantId' => $doctrineMessage->getTenantId(), 'transactionId' => $doctrineMessage->getTransactionId()]);
+        $message = new Message($id, $doctrineMessage->getMessage(),
+            [self::METADATA_TENANT_ID => $doctrineMessage->getTenantId(),
+                self::METADATA_TRANSACTION_ID => $doctrineMessage->getTransactionId()]);
         $doctrineMessage->setDelivered(true);
         $this->em->flush();
         return $message;
@@ -278,26 +284,8 @@ class DoctrineProvider extends AbstractProvider {
      */
 
     public function counts($data = null) {
-        if (isset($data['period']) && $data['period'] !== null) {
-            $period = $data['period'];
-        } else {
-            $period = self::DEFAULT_PERIOD;
-        }
-        $sql = 'SELECT from_unixtime(floor(unix_timestamp(created)/'
-            . $period . ') * ' . $period . ') as time, 
-            count(*) as count 
-            FROM uecode_qpush_message
-            where queue = "' . $this->name . '"';
-        if (isset($data['from']) && $data['from'] !== null) {
-            $sql = $sql . ' and created >= "' . $data['from'] . '"';
-        }
-        if (isset($data['to']) && $data['to'] !== null) {
-            $sql = $sql . ' and created <= "' . $data['to'] . '"';
-        }
-        $sql = $sql . ' group by time  order by time ASC';
-        $statement = $this->em->getConnection()->prepare($sql);
-        $statement->execute();
-        $results = $statement->fetchAll();
+
+        $results = $this->repository->getCount($this->name, $data);
 
         return $results;
     }
@@ -312,7 +300,7 @@ class DoctrineProvider extends AbstractProvider {
         $message = $this->repository->find($id);
         $tenantId = $message->getTenantId();
         $transactionId = $message->getTransactionId();
-        
+
         $message->setDelivered(false);
         $this->em->flush();
 

@@ -32,7 +32,7 @@ use Talisman\TideBundle\Traits\TenantTrait;
 use Talisman\TideBundle\Traits\TransactionTrait;
 
 /**
- * @ORM\Entity
+ * @ORM\Entity(repositoryClass="Uecode\Bundle\QPushBundle\Repository\DoctrineRepository")
  * @ORM\Table(name="uecode_qpush_message",
  * indexes={@ORM\Index(name="uecode_qpush_queue_idx",columns={"queue"}),
  *          @ORM\Index(name="uecode_qpush_delivered_idx",columns={"delivered"}),
