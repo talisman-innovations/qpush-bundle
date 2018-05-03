@@ -168,8 +168,8 @@ class DoctrineProvider extends AbstractProvider {
         $messages = [];
         foreach ($doctrineMessages as $doctrineMessage) {
             $messages[] = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(),
-                [self::METADATA_TENANT_ID => $doctrineMessage->getTenantId(),
-                    self::METADATA_TRANSACTION_ID => $doctrineMessage->getTransactionId()]);
+                    [self::METADATA_TENANT_ID => $doctrineMessage->getTenantId(),
+                        self::METADATA_TRANSACTION_ID => $doctrineMessage->getTransactionId()]);
             $doctrineMessage->setDelivered(true);
         }
         $this->em->flush();
