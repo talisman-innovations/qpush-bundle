@@ -22,6 +22,7 @@
 
 namespace Uecode\Bundle\QPushBundle\Provider;
 
+use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\Common\Cache\Cache;
 use Monolog\Logger;
 use Uecode\Bundle\QPushBundle\Message\Message;
@@ -168,8 +169,8 @@ class DoctrineProvider extends AbstractProvider {
         $messages = [];
         foreach ($doctrineMessages as $doctrineMessage) {
             $messages[] = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(),
-                    [self::METADATA_TENANT_ID => $doctrineMessage->getTenantId(),
-                        self::METADATA_TRANSACTION_ID => $doctrineMessage->getTransactionId()]);
+                [self::METADATA_TENANT_ID => $doctrineMessage->getTenantId(),
+                    self::METADATA_TRANSACTION_ID => $doctrineMessage->getTransactionId()]);
             $doctrineMessage->setDelivered(true);
         }
         $this->em->flush();
@@ -243,8 +244,13 @@ class DoctrineProvider extends AbstractProvider {
      *
      */
     public function findBy($data) {
-        $qb = $this->repository->createQueryBuilder('p');
+        $qb = $this->em->createQueryBuilder();
+
         $qb->select('p');
+        $qb->addSelect('t.name');
+        $qb->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'p');
+        $qb->innerJoin('Talisman\TideBundle\Entity\Tenant', 't', Join::WITH, 't.id = p.tenantId');
+
         $qb->where('p.queue = :queue');
         $qb->setParameter('queue', $this->name);
 
