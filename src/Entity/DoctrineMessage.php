@@ -43,6 +43,7 @@ use Talisman\TideBundle\Traits\TransactionTrait;
  */
 class DoctrineMessage implements TenantInterface, TransactionInterface
 {
+    use TenantTrait;
     use TransactionTrait;
 
     /**
@@ -95,31 +96,6 @@ class DoctrineMessage implements TenantInterface, TransactionInterface
      * @ORM\OneToMany(targetEntity="DoctrineMessageResult", mappedBy="message")
      */
     private $results;
-
-    /**
-     * @ORM\Column(name="tenant_id", type="integer", nullable=true)
-     */
-    private $tenantId;
-
-    /**
-     * @return int
-     */
-    public function getTenantId()
-    {
-        return $this->tenantId;
-    }
-
-    /**
-     * @param int $tenantId
-     *
-     * @return $this
-     */
-    public function setTenantId($tenantId)
-    {
-        $this->tenantId = $tenantId;
-
-        return $this;
-    }
 
     /*
      * Constructor
