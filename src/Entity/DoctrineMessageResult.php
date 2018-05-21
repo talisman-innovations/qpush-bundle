@@ -25,13 +25,22 @@ namespace Uecode\Bundle\QPushBundle\Entity;
 use Doctrine\ORM\Mapping as ORM;
 use Doctrine\ORM\Mapping\Index as Index;
 use Gedmo\Mapping\Annotation as Gedmo;
+use Talisman\TideBundle\Interfaces\TenantInterface;
+use Talisman\TideBundle\Interfaces\TransactionInterface;
+use Talisman\TideBundle\Traits\TenantTrait;
+use Talisman\TideBundle\Traits\TransactionTrait;
 
 /**
- * @ORM\Entity
+ * 
+ * @ORM\Entity(repositoryClass="Uecode\Bundle\QPushBundle\Repository\DoctrineResultRepository")
  * @ORM\Table(name="uecode_qpush_message_result")
+ * 
  */
-class DoctrineMessageResult {
+class DoctrineMessageResult implements TenantInterface, TransactionInterface {
 
+    use TenantTrait;
+    use TransactionTrait;
+    
     /**
      * @ORM\Id 
      * @ORM\GeneratedValue 
@@ -64,43 +73,43 @@ class DoctrineMessageResult {
      */
     private $result;
  
-    function getId() {
+    public function getId() {
         return $this->id;
     }
 
-    function getCreated() {
+    public function getCreated() {
         return $this->created;
     }
 
-    function getMessage() {
+    public function getMessage() {
         return $this->message;
     }
 
-    function getCallable() {
+    public function getCallable() {
         return $this->callable;
     }
 
-    function getResult() {
+    public function getResult() {
         return $this->result;
     }
 
-    function setId($id) {
+    public function setId($id) {
         $this->id = $id;
     }
 
-    function setCreated(\DateTime $created) {
+    public function setCreated(\DateTime $created) {
         $this->created = $created;
     }
 
-    function setMessage($message) {
+    public function setMessage($message) {
         $this->message = $message;
     }
 
-    function setCallable($callable) {
+    public function setCallable($callable) {
         $this->callable = $callable;
     }
 
-    function setResult($result) {
+    public function setResult($result) {
         $this->result = $result;
     }
 

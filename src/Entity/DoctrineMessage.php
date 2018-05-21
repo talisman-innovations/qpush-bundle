@@ -105,15 +105,15 @@ class DoctrineMessage implements TenantInterface, TransactionInterface
         $this->results = new ArrayCollection();
     }
 
-    function getId() {
+    public function getId() {
         return $this->id;
     }
 
-    function getCreated() {
+    public function getCreated() {
         return $this->created;
     }
 
-    function getUpdated() {
+    public function getUpdated() {
         return $this->updated;
     }
 
@@ -121,57 +121,57 @@ class DoctrineMessage implements TenantInterface, TransactionInterface
         return $this->queue;
     }
 
-    function getDelivered() {
+    public function getDelivered() {
         return $this->delivered;
     }
 
-    function getMessage() {
+    public function getMessage() {
         return $this->message;
     }
 
-    function getLength() {
+    public function getLength() {
         return $this->length;
     }
 
-    function getResults() {
+    public function getResults() {
         return $this->results;
     }
 
-    function setId($id) {
+    public function setId($id) {
         $this->id = $id;
     }
 
-    function setCreated(\DateTime $created) {
+    public function setCreated(\DateTime $created) {
         $this->created = $created;
         return $this;
     }
 
-    function setUpdated(\DateTime $updated) {
+    public function setUpdated(\DateTime $updated) {
         $this->updated = $updated;
         return $this;
     }
 
-    function setQueue($queue) {
+    public function setQueue($queue) {
         $this->queue = $queue;
         return $this;
     }
 
-    function setDelivered($delivered) {
+    public function setDelivered($delivered) {
         $this->delivered = $delivered;
         return $this;
     }
 
-    function setMessage($message) {
+    public function setMessage($message) {
         $this->message = $message;
         return $this;
     }
 
-    function setLength($length) {
+    public function setLength($length) {
         $this->length = $length;
         return $this;
     }
 
-    function setResults($results) {
+    public function setResults($results) {
         $this->results = $results;
         return $this;
     }
