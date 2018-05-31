@@ -20,6 +20,8 @@ class DoctrineResultRepository extends EntityRepository {
         $statement->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult', 'p');
         $statement->addSelect('q.queue');
         $statement->innerJoin('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'q', Join::WITH, 'p.message = q.id');
+        $statement->addSelect('t.name');
+        $statement->innerJoin('Talisman\TideBundle\Entity\Tenant', 't', Join::WITH, 't.id = p.tenantId');
                 
         if (isset($data['result']) && $data['result'] !== null) {
            
