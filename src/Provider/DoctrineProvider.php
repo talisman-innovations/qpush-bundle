@@ -145,7 +145,6 @@ class DoctrineProvider extends AbstractProvider {
 
         $notification = sprintf('%s %d %d %s', $name, $id, $tenantId, $transactionId);
         $sender->send($notification);
-        $this->logger->debug('Completed 0MQ message', [$notification]);
     }
 
     /**
