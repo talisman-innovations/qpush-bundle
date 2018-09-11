@@ -17,6 +17,12 @@ services:
 
     Uecode\Bundle\QPushBundle\Provider\ProviderRegistry: '@uecode_qpush.registry'   
     
+    Uecode\Bundle\QPushBundle\Repository\DoctrineRepository:
+        class: Doctrine\ORM\EntityRepository
+        factory: ['@doctrine.orm.default_entity_manager', getRepository]
+        arguments:
+            - Uecode\Bundle\QPushBundle\Entity\DoctrineMessage
+            
     Uecode\Bundle\QPushBundle\Repository\DoctrineResultRepository:
         class: Doctrine\ORM\EntityRepository
         factory: ['@doctrine.orm.default_entity_manager', getRepository]
