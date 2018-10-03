@@ -23,7 +23,6 @@
 namespace Uecode\Bundle\QPushBundle\Entity;
 
 use Doctrine\ORM\Mapping as ORM;
-use Doctrine\ORM\Mapping\Index as Index;
 use Gedmo\Mapping\Annotation as Gedmo;
 use Doctrine\Common\Collections\ArrayCollection as ArrayCollection;
 use Talisman\TideBundle\Interfaces\TenantInterface;
@@ -38,11 +37,12 @@ use Talisman\TideBundle\Traits\TransactionTrait;
  *          @ORM\Index(name="uecode_qpush_delivered_idx",columns={"delivered"}),
  *          @ORM\Index(name="uecode_qpush_created_idx",columns={"created"}),
  *          @ORM\Index(name="uecode_qpush_message_idx",columns={"message"}, flags={"fulltext"}),
- *          @ORM\Index(name="uecode_qpush_transaction_id_idx", columns={"transaction_id"})
+ *          @ORM\Index(name="uecode_qpush_transaction_id_idx", columns={"transaction_id"}),
+ *          @ORM\Index(name="uecode_qpush_tenant_id_idx", columns={"tenant_id"})
  *         })
  */
-class DoctrineMessage implements TenantInterface, TransactionInterface
-{
+class DoctrineMessage implements TenantInterface, TransactionInterface {
+
     use TenantTrait;
     use TransactionTrait;
 
@@ -176,6 +176,4 @@ class DoctrineMessage implements TenantInterface, TransactionInterface
         return $this;
     }
 
-
 }
-
