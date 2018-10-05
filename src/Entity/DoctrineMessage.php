@@ -38,7 +38,6 @@ use Talisman\TideBundle\Traits\TransactionTrait;
  *          @ORM\Index(name="uecode_qpush_created_idx",columns={"created"}),
  *          @ORM\Index(name="uecode_qpush_message_idx",columns={"message"}, flags={"fulltext"}),
  *          @ORM\Index(name="uecode_qpush_transaction_id_idx", columns={"transaction_id"}),
- *          @ORM\Index(name="uecode_qpush_tenant_id_idx", columns={"tenant_id"})
  *         })
  */
 class DoctrineMessage implements TenantInterface, TransactionInterface {

@@ -59,7 +59,7 @@ class DoctrineProvider extends AbstractProvider {
         $this->repository = $this->em->getRepository(self::$entityName);
 
         if (class_exists('\ZMQ') &&
-            array_key_exists('zeromq_controller_socket', $this->options)) {
+                array_key_exists('zeromq_controller_socket', $this->options)) {
             $this->context = new \ZMQContext();
             $this->sender = new \ZMQSocket($this->context, \ZMQ::SOCKET_PUSH);
             $this->sender->connect($this->options['zeromq_controller_socket']);
@@ -81,10 +81,6 @@ class DoctrineProvider extends AbstractProvider {
      * @return array
      */
     public function getRepository() {
-        if (!$this->repository) {
-            return;
-        }
-
         return $this->repository;
     }
 
@@ -117,9 +113,9 @@ class DoctrineProvider extends AbstractProvider {
 
         $doctrineMessage = new DoctrineMessage();
         $doctrineMessage->setQueue($this->name)
-            ->setDelivered(false)
-            ->setMessage($message)
-            ->setLength(strlen(serialize($message)));
+                ->setDelivered(false)
+                ->setMessage($message)
+                ->setLength(strlen(serialize($message)));
 
         $this->em->persist($doctrineMessage);
         $this->em->flush();
@@ -162,14 +158,13 @@ class DoctrineProvider extends AbstractProvider {
     public function receive(array $options = []) {
 
         $doctrineMessages = $this->repository->findBy(
-            array('delivered' => false, 'queue' => $this->name), array('id' => 'ASC')
+                array('delivered' => false, 'queue' => $this->name), array('id' => 'ASC')
         );
 
         $messages = [];
         foreach ($doctrineMessages as $doctrineMessage) {
-            $messages[] = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(),
-                [self::METADATA_TENANT_ID => $doctrineMessage->getTenantId(),
-                    self::METADATA_TRANSACTION_ID => $doctrineMessage->getTransactionId()]);
+            $messages[] = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(), [self::METADATA_TENANT_ID => $doctrineMessage->getTenantId(),
+                self::METADATA_TRANSACTION_ID => $doctrineMessage->getTransactionId()]);
             $doctrineMessage->setDelivered(true);
         }
         $this->em->flush();
@@ -188,9 +183,8 @@ class DoctrineProvider extends AbstractProvider {
     public function receiveOne($id) {
 
         $doctrineMessage = $this->getById($id);
-        $message = new Message($id, $doctrineMessage->getMessage(),
-            [self::METADATA_TENANT_ID => $doctrineMessage->getTenantId(),
-                self::METADATA_TRANSACTION_ID => $doctrineMessage->getTransactionId()]);
+        $message = new Message($id, $doctrineMessage->getMessage(), [self::METADATA_TENANT_ID => $doctrineMessage->getTenantId(),
+            self::METADATA_TRANSACTION_ID => $doctrineMessage->getTransactionId()]);
         $doctrineMessage->setDelivered(true);
         $this->em->flush();
         return $message;
@@ -242,44 +236,8 @@ class DoctrineProvider extends AbstractProvider {
      * @return Query
      *
      */
-    public function findBy($data) {
-        $qb = $this->em->createQueryBuilder();
-
-        $qb->select('p');
-        $qb->addSelect('t.name');
-        $qb->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'p');
-        $qb->innerJoin('Talisman\TideBundle\Entity\Tenant', 't', Join::WITH, 't.id = p.tenantId');
-
-        $qb->where('p.queue = :queue');
-        $qb->setParameter('queue', $this->name);
-
-        $field = (isset($data['field'])) ? $data['field'] : 'message';
-
-        if (isset($data['search']) && $data['search'] !== null) {
-            switch($field) {
-                case 'message':
-                    $qb->andWhere('MATCH(p.' . $field . ') AGAINST(:contains boolean) > 0');
-                    $qb->setParameter('contains', $data['search']);
-                    break;
-                case 'sourceId':
-                    $qb->andWhere('MATCH(p.message) AGAINST(:contains boolean) > 0');
-                    $qb->setParameter('contains', 'sourceId +'.$data['search']);
-                    break;
-                default :
-                    $qb->andWhere('p.' . $field . ' = :equals');
-                    $qb->setParameter('equals', $data['search']);
-                    break;
-            }
-
-        }
-
-        if (isset($data['from']) && $data['from'] !== null && isset($data['to']) && $data['to'] !== null) {
-            $qb->andWhere('p.created BETWEEN :from AND :to');
-            $qb->setParameter('from', $data['from']);
-            $qb->setParameter('to', $data['to']);
-        }
-
-        return $qb->getQuery();
+    public function paginate($data) {
+        return $this->repository->paginate($this->name, $data);
     }
 
     /*
@@ -336,4 +294,3 @@ class DoctrineProvider extends AbstractProvider {
     }
 
 }
-

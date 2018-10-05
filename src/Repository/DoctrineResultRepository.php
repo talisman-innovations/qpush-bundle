@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Copyright Talisman Innovations Ltd. (2018). All rights reserved.
  */
@@ -9,22 +10,23 @@ use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query\Expr\Join;
 
 class DoctrineResultRepository extends EntityRepository {
-    
+
     const DEFAULT_PERIOD = 300;
-    
 
     public function paginate($data = []) {
-        
+
         $statement = $this->getEntityManager()->createQueryBuilder();
-        $statement->select('p');
-        $statement->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult', 'p');
+
+        $statement->select('r');
         $statement->addSelect('q.queue');
-        $statement->innerJoin('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'q', Join::WITH, 'p.message = q.id');
         $statement->addSelect('t.name');
-        $statement->innerJoin('Talisman\TideBundle\Entity\Tenant', 't', Join::WITH, 't.id = p.tenantId');
-                
+
+        $statement->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult', 'r');    
+        $statement->join('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'q', Join::WITH, 'r.message = q');
+        $statement->join('Talisman\TideBundle\Entity\Tenant', 't', Join::WITH, 't = r.tenant');
+
         if (isset($data['result']) && $data['result'] !== null) {
-           
+
             $statement->where('p.result = :result');
             $statement->setParameter('result', $data['result']);
             $statement->andWhere('q.queue = :queue');
@@ -39,16 +41,14 @@ class DoctrineResultRepository extends EntityRepository {
                 $statement->andWhere('p.created <= :to');
                 $statement->setParameter('to', $data['to']);
             }
-          
         }
 
         return $statement->getQuery();
     }
-    
-    public function getCount($queue, $result, $data)
-    {
+
+    public function getCount($queue, $result, $data) {
         $statement = $this->getEntityManager()->createQueryBuilder();
-        
+
         if (isset($data['period']) && $data['period'] !== null) {
             $period = $data['period'];
         } else {
@@ -60,8 +60,10 @@ class DoctrineResultRepository extends EntityRepository {
 
         $statement->select($expression);
         $statement->addSelect('q.queue');
+        
         $statement->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult', 'r');
-        $statement->innerJoin('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'q', Join::WITH, 'r.message = q.id');
+        $statement->innerJoin('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'q');
+        
         $statement->where('q.queue = :queue');
         $statement->setParameter('queue', $queue);
         $statement->andWhere('r.result = :result');
@@ -86,5 +88,5 @@ class DoctrineResultRepository extends EntityRepository {
 
         return $results;
     }
-    
+
 }
