@@ -32,7 +32,8 @@ use Talisman\TideBundle\Traits\TransactionTrait;
 
 /**
  * @ORM\Entity(repositoryClass="Uecode\Bundle\QPushBundle\Repository\DoctrineRepository")
- * @ORM\Table(name="uecode_qpush_message",
+ * @ORM\Table(name="uecode_qpush_message", 
+ * options={"collate":"utf8_general_ci", "charset":"utf8"},
  * indexes={@ORM\Index(name="uecode_qpush_queue_idx",columns={"queue"}),
  *          @ORM\Index(name="uecode_qpush_delivered_idx",columns={"delivered"}),
  *          @ORM\Index(name="uecode_qpush_created_idx",columns={"created"}),
