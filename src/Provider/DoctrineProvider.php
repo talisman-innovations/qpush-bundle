@@ -120,7 +120,7 @@ class DoctrineProvider extends AbstractProvider {
         $this->em->persist($doctrineMessage);
         $this->em->flush();
         $id = $doctrineMessage->getId();
-        $tenantId = $doctrineMessage->getTenantId();
+        $tenantId = $doctrineMessage->getTenant()->getId();
         $transactionId = $doctrineMessage->getTransactionId();
 
         if (isset($this->sender)) {
