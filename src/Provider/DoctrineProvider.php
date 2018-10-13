@@ -229,17 +229,6 @@ class DoctrineProvider extends AbstractProvider {
         return $this->repository->find($id);
     }
 
-    /**
-     * Returns a query of the message queue
-     *
-     * @param array $data ['field'=>'id', 'search'=>'text', 'to'=>date, from=>date]
-     * @return Query
-     *
-     */
-    public function paginate($data) {
-        return $this->repository->paginate($this->name, $data);
-    }
-
     /*
      * Returns an array of times and messgae counts
      * @praram $data ['from' => date, 'to' => date, 'period' => seconds
