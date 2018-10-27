@@ -54,4 +54,24 @@ class DoctrineRepository extends EntityRepository {
         return $results;
     }
 
+    /*
+     * Get metadata about undelivered messages
+     * 
+     * @var string $queue
+     * @return array()
+     */
+
+    public function getUndeliveredMetadata($queue) {
+        
+        $query = $this->createQueryBuilder('q');
+        
+        $query->select(['q.id', 'q.tenantId', 'q.transactionId'])
+                ->where($query->expr()->eq('q.delivered', 'false'))
+                ->andWhere($query->expr()->eq('q.queue', ':queue'))
+                ->setParameter('queue', $queue)
+                ->orderBy('q.id', 'ASC');
+
+        return $query->getQuery()->getResult();
+    }
+
 }
