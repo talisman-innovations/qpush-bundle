@@ -119,9 +119,12 @@ class DoctrineProvider extends AbstractProvider {
 
         $this->em->persist($doctrineMessage);
         $this->em->flush();
+
         $id = $doctrineMessage->getId();
         $tenantId = $doctrineMessage->getTenant()->getId();
         $transactionId = $doctrineMessage->getTransactionId();
+
+        $this->em->detach($doctrineMessage);
 
         if (isset($this->sender)) {
             $this->push($this->sender, $this->name, $id, $tenantId, $transactionId);
@@ -163,11 +166,16 @@ class DoctrineProvider extends AbstractProvider {
 
         $messages = [];
         foreach ($doctrineMessages as $doctrineMessage) {
-            $messages[] = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(), [self::METADATA_TENANT_ID => $doctrineMessage->getTenantId(),
+            $messages[] = new Message($doctrineMessage->getId(), $doctrineMessage->getMessage(), 
+                    [self::METADATA_TENANT_ID => $doctrineMessage->getTenant()->getId(),
                 self::METADATA_TRANSACTION_ID => $doctrineMessage->getTransactionId()]);
             $doctrineMessage->setDelivered(true);
         }
         $this->em->flush();
+
+        foreach ($doctrineMessages as $doctrineMessage) {
+            $this->em->detach($doctrineMessage);
+        }
 
         return $messages;
     }
@@ -183,10 +191,15 @@ class DoctrineProvider extends AbstractProvider {
     public function receiveOne($id) {
 
         $doctrineMessage = $this->getById($id);
-        $message = new Message($id, $doctrineMessage->getMessage(), [self::METADATA_TENANT_ID => $doctrineMessage->getTenantId(),
+        $message = new Message($id, $doctrineMessage->getMessage(), 
+                [self::METADATA_TENANT_ID => $doctrineMessage->getTenant()->getId(),
             self::METADATA_TRANSACTION_ID => $doctrineMessage->getTransactionId()]);
+
         $doctrineMessage->setDelivered(true);
+
         $this->em->flush();
+        $this->em->detach($doctrineMessage);
+
         return $message;
     }
 
@@ -199,6 +212,7 @@ class DoctrineProvider extends AbstractProvider {
         $doctrineMessage = $this->repository->find($id);
         $doctrineMessage->setDelivered(true);
         $this->em->flush();
+        $this->em->detach($doctrineMessage);
 
         return true;
     }
@@ -249,12 +263,15 @@ class DoctrineProvider extends AbstractProvider {
      */
     public function redeliver($id) {
 
-        $message = $this->repository->find($id);
-        $tenantId = $message->getTenantId();
-        $transactionId = $message->getTransactionId();
+        $doctrineMessage = $this->repository->find($id);
 
-        $message->setDelivered(false);
+        $tenantId = $doctrineMessage->getTenant()->getId();
+        $transactionId = $doctrineMessage->getTransactionId();
+
+        $doctrineMessage->setDelivered(false);
+
         $this->em->flush();
+        $this->em->detach($doctrineMessage);
 
         if (isset($this->sender)) {
             $this->push($this->sender, $this->name, $id, $tenantId, $transactionId);
@@ -278,6 +295,9 @@ class DoctrineProvider extends AbstractProvider {
 
         $this->em->persist($doctrineMessageResult);
         $this->em->flush();
+
+        $this->em->detach($doctrineMessage);
+        $this->em->detach($doctrineMessageResult);
 
         return $doctrineMessageResult;
     }
