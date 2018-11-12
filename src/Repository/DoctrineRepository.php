@@ -8,7 +8,8 @@ namespace Uecode\Bundle\QPushBundle\Repository;
 
 use Doctrine\ORM\EntityRepository;
 
-class DoctrineRepository extends EntityRepository {
+class DoctrineRepository extends EntityRepository
+{
 
     const DEFAULT_PERIOD = 300;
 
@@ -17,7 +18,8 @@ class DoctrineRepository extends EntityRepository {
      * @param array $data
      * @return array
      */
-    public function getCount($queue, $data = null) {
+    public function getCount($queue, $data = null)
+    {
         $statement = $this->getEntityManager()->createQueryBuilder();
 
         if (isset($data['period']) && $data['period'] !== null) {
@@ -61,15 +63,18 @@ class DoctrineRepository extends EntityRepository {
      * @return array()
      */
 
-    public function getUndeliveredMetadata($queue) {
-        
+    public function getUndeliveredMetadata($queue)
+    {
+
         $query = $this->createQueryBuilder('q');
-        
-        $query->select(['q.id', 'q.tenantId', 'q.transactionId'])
-                ->where($query->expr()->eq('q.delivered', 'false'))
-                ->andWhere($query->expr()->eq('q.queue', ':queue'))
-                ->setParameter('queue', $queue)
-                ->orderBy('q.id', 'ASC');
+
+        $query->select(['q.id', 'q.transactionId'])
+            ->addSelect('t.id')
+            ->join('q.tenant', 't')
+            ->where($query->expr()->eq('q.delivered', 'false'))
+            ->andWhere($query->expr()->eq('q.queue', ':queue'))
+            ->setParameter('queue', $queue)
+            ->orderBy('q.id', 'ASC');
 
         return $query->getQuery()->getResult();
     }
