@@ -69,7 +69,7 @@ class DoctrineRepository extends EntityRepository
         $query = $this->createQueryBuilder('q');
 
         $query->select(['q.id', 'q.transactionId'])
-            ->addSelect('t.id')
+            ->addSelect('t.id as tenantId')
             ->join('q.tenant', 't')
             ->where($query->expr()->eq('q.delivered', 'false'))
             ->andWhere($query->expr()->eq('q.queue', ':queue'))
