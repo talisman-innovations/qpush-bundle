@@ -1,4 +1,8 @@
 services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        
     ### QPush Registry
     uecode_qpush.registry:
         class: '%uecode_qpush.registry.class%'
