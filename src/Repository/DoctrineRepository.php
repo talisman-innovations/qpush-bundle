@@ -26,7 +26,7 @@ class DoctrineRepository extends TenantAwareBaseRepository {
      * @return array
      */
     public function getCount($queue, $data = null) {
-        $statement = $this->createQueryBuilder();
+        $statement = $this->createQueryBuilder('q');
 
         if (isset($data['period']) && $data['period'] !== null) {
             $period = $data['period'];
@@ -38,7 +38,6 @@ class DoctrineRepository extends TenantAwareBaseRepository {
         $expression = 'FROM_UNIXTIME(((FLOOR((UNIX_TIMESTAMP(q.created)/' . $period . ')))*' . $period . ')) as time, count(q.created) as counter';
 
         $statement->select($expression);
-        $statement->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'q');
         $statement->andWhere('q.queue = :queue');
         $statement->setParameter('queue', $queue);
 
