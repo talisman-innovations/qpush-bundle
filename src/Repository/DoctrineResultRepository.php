@@ -55,7 +55,7 @@ class DoctrineResultRepository extends TenantAwareBaseRepository {
     }
 
     public function getCount($queue, $result, $data) {
-        $statement = $this->createQueryBuilder();
+        $statement = $this->createQueryBuilder('r');
 
         if (isset($data['period']) && $data['period'] !== null) {
             $period = $data['period'];
@@ -69,7 +69,6 @@ class DoctrineResultRepository extends TenantAwareBaseRepository {
         $statement->select($expression);
         $statement->addSelect('q.queue');
 
-        $statement->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult', 'r');
         $statement->innerJoin('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'q');
 
         $statement->andWhere('q.queue = :queue');
