@@ -31,7 +31,7 @@ use Talisman\TideBundle\Traits\TenantTrait;
 use Talisman\TideBundle\Traits\TransactionTrait;
 
 /**
- * @ORM\Entity(repositoryClass="Uecode\Bundle\QPushBundle\Repository\DoctrineRepository")
+ * @ORM\Entity
  * @ORM\Table(name="uecode_qpush_message",
  * options={"collate":"	utf8mb4_unicode_ci", "charset":"utf8mb4"},
  * indexes={@ORM\Index(name="uecode_qpush__tenant_queue_created_idx",columns={"tenant_id","queue","created"}),

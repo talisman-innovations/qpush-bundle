@@ -6,21 +6,27 @@
 
 namespace Uecode\Bundle\QPushBundle\Repository;
 
-use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Talisman\TideBundle\Service\TenantManager;
+use Talisman\TideBundle\Repository\TenantAwareBaseRepository;
+use Uecode\Bundle\QPushBundle\Entity\DoctrineMessage;
 
-class DoctrineRepository extends EntityRepository
-{
+class DoctrineRepository extends TenantAwareBaseRepository {
 
     const DEFAULT_PERIOD = 300;
+
+    public function __construct(EntityManagerInterface $em, TenantManager $tenantManager) {
+        parent::__construct($em, $tenantManager);
+        $this->repository = $em->getRepository(DoctrineMessage::class);
+    }
 
     /**
      * @param string $queue
      * @param array $data
      * @return array
      */
-    public function getCount($queue, $data = null)
-    {
-        $statement = $this->getEntityManager()->createQueryBuilder();
+    public function getCount($queue, $data = null) {
+        $statement = $this->createQueryBuilder();
 
         if (isset($data['period']) && $data['period'] !== null) {
             $period = $data['period'];
@@ -33,7 +39,7 @@ class DoctrineRepository extends EntityRepository
 
         $statement->select($expression);
         $statement->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'q');
-        $statement->where('q.queue = :queue');
+        $statement->andWhere('q.queue = :queue');
         $statement->setParameter('queue', $queue);
 
         if (isset($data['from']) && $data['from'] !== null) {
@@ -63,18 +69,17 @@ class DoctrineRepository extends EntityRepository
      * @return array()
      */
 
-    public function getUndeliveredMetadata($queue)
-    {
+    public function getUndeliveredMetadata($queue) {
 
         $query = $this->createQueryBuilder('q');
 
         $query->select(['q.id', 'q.transactionId'])
-            ->addSelect('t.id as tenantId')
-            ->join('q.tenant', 't')
-            ->where($query->expr()->eq('q.delivered', 'false'))
-            ->andWhere($query->expr()->eq('q.queue', ':queue'))
-            ->setParameter('queue', $queue)
-            ->orderBy('q.id', 'ASC');
+                ->addSelect('t.id as tenantId')
+                ->join('q.tenant', 't')
+                ->andWhere($query->expr()->eq('q.delivered', 'false'))
+                ->andWhere($query->expr()->eq('q.queue', ':queue'))
+                ->setParameter('queue', $queue)
+                ->orderBy('q.id', 'ASC');
 
         return $query->getQuery()->getResult();
     }

@@ -6,28 +6,36 @@
 
 namespace Uecode\Bundle\QPushBundle\Repository;
 
-use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Talisman\TideBundle\Service\TenantManager;
+use Talisman\TideBundle\Repository\TenantAwareBaseRepository;
+use Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult;
 use Doctrine\ORM\Query\Expr\Join;
 
-class DoctrineResultRepository extends EntityRepository {
+class DoctrineResultRepository extends TenantAwareBaseRepository {
 
     const DEFAULT_PERIOD = 300;
 
+    public function __construct(EntityManagerInterface $em, TenantManager $tenantManager) {
+        parent::__construct($em, $tenantManager);
+        $this->repository = $em->getRepository(DoctrineMessageResult::class);
+    }
+
     public function paginate($data = []) {
 
-        $statement = $this->getEntityManager()->createQueryBuilder();
+        $statement = $this->createQueryBuilder();
 
         $statement->select('r');
         $statement->addSelect('q.queue');
         $statement->addSelect('t.name');
 
-        $statement->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult', 'r');    
+        $statement->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult', 'r');
         $statement->join('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'q', Join::WITH, 'r.message = q');
         $statement->join('Talisman\TideBundle\Entity\Tenant', 't', Join::WITH, 't = r.tenant');
 
         if (isset($data['result']) && $data['result'] !== null) {
 
-            $statement->where('p.result = :result');
+            $statement->andWhere('p.result = :result');
             $statement->setParameter('result', $data['result']);
             $statement->andWhere('q.queue = :queue');
             $statement->setParameter('queue', $data['queue']);
@@ -47,7 +55,7 @@ class DoctrineResultRepository extends EntityRepository {
     }
 
     public function getCount($queue, $result, $data) {
-        $statement = $this->getEntityManager()->createQueryBuilder();
+        $statement = $this->createQueryBuilder();
 
         if (isset($data['period']) && $data['period'] !== null) {
             $period = $data['period'];
@@ -60,11 +68,11 @@ class DoctrineResultRepository extends EntityRepository {
 
         $statement->select($expression);
         $statement->addSelect('q.queue');
-        
+
         $statement->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult', 'r');
         $statement->innerJoin('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'q');
-        
-        $statement->where('q.queue = :queue');
+
+        $statement->andWhere('q.queue = :queue');
         $statement->setParameter('queue', $queue);
         $statement->andWhere('r.result = :result');
         $statement->setParameter('result', $result);

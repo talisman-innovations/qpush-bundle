@@ -31,7 +31,7 @@ use Talisman\TideBundle\Traits\TransactionTrait;
 
 /**
  * 
- * @ORM\Entity(repositoryClass="Uecode\Bundle\QPushBundle\Repository\DoctrineResultRepository")
+ * @ORM\Entity
  * @ORM\Table(name="uecode_qpush_message_result")
  * 
  */
