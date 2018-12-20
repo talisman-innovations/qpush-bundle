@@ -12,7 +12,7 @@ use Talisman\TideBundle\Repository\TenantAwareBaseRepository;
 use Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult;
 use Doctrine\ORM\Query\Expr\Join;
 
-class DoctrineResultRepository extends TenantAwsareBaseRepository {
+class DoctrineResultRepository extends TenantAwareBaseRepository {
 
     const DEFAULT_PERIOD = 300;
 
