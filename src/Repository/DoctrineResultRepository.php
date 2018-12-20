@@ -12,7 +12,7 @@ use Talisman\TideBundle\Repository\TenantAwareBaseRepository;
 use Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult;
 use Doctrine\ORM\Query\Expr\Join;
 
-class DoctrineResultRepository extends TenantAwareBaseRepository {
+class DoctrineResultRepository extends TenantAwsareBaseRepository {
 
     const DEFAULT_PERIOD = 300;
 
@@ -23,30 +23,28 @@ class DoctrineResultRepository extends TenantAwareBaseRepository {
 
     public function paginate($data = []) {
 
-        $statement = $this->createQueryBuilder();
+        $statement = $this->createQueryBuilder('r');
 
-        $statement->select('r');
         $statement->addSelect('q.queue');
         $statement->addSelect('t.name');
 
-        $statement->from('Uecode\Bundle\QPushBundle\Entity\DoctrineMessageResult', 'r');
         $statement->join('Uecode\Bundle\QPushBundle\Entity\DoctrineMessage', 'q', Join::WITH, 'r.message = q');
         $statement->join('Talisman\TideBundle\Entity\Tenant', 't', Join::WITH, 't = r.tenant');
 
         if (isset($data['result']) && $data['result'] !== null) {
 
-            $statement->andWhere('p.result = :result');
+            $statement->andWhere('r.result = :result');
             $statement->setParameter('result', $data['result']);
             $statement->andWhere('q.queue = :queue');
             $statement->setParameter('queue', $data['queue']);
 
             if (isset($data['from']) && $data['from'] !== null) {
-                $statement->andWhere('p.created >= :from');
+                $statement->andWhere('q.created >= :from');
                 $statement->setParameter('from', $data['from']);
             }
 
             if (isset($data['to']) && $data['to'] !== null) {
-                $statement->andWhere('p.created <= :to');
+                $statement->andWhere('q.created <= :to');
                 $statement->setParameter('to', $data['to']);
             }
         }
@@ -55,6 +53,7 @@ class DoctrineResultRepository extends TenantAwareBaseRepository {
     }
 
     public function getCount($queue, $result, $data) {
+        
         $statement = $this->createQueryBuilder('r');
 
         if (isset($data['period']) && $data['period'] !== null) {

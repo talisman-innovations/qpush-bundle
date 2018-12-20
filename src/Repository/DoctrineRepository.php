@@ -26,6 +26,7 @@ class DoctrineRepository extends TenantAwareBaseRepository {
      * @return array
      */
     public function getCount($queue, $data = null) {
+        
         $statement = $this->createQueryBuilder('q');
 
         if (isset($data['period']) && $data['period'] !== null) {
