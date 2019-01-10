@@ -29,6 +29,7 @@ use Talisman\TideBundle\Interfaces\TenantInterface;
 use Talisman\TideBundle\Interfaces\TransactionInterface;
 use Talisman\TideBundle\Traits\TenantTrait;
 use Talisman\TideBundle\Traits\TransactionTrait;
+use Talisman\TideBundle\Traits\Id64Trait;
 
 /**
  * @ORM\Entity
@@ -44,13 +45,7 @@ class DoctrineMessage implements TenantInterface, TransactionInterface {
 
     use TenantTrait;
     use TransactionTrait;
-
-    /**
-     * @ORM\Id
-     * @ORM\GeneratedValue
-     * @ORM\Column(type="integer")
-     */
-    private $id;
+    use Id64Trait;
 
     /**
      * @var \DateTime $created
@@ -104,10 +99,6 @@ class DoctrineMessage implements TenantInterface, TransactionInterface {
         $this->results = new ArrayCollection();
     }
 
-    public function getId() {
-        return $this->id;
-    }
-
     public function getCreated() {
         return $this->created;
     }
@@ -134,10 +125,6 @@ class DoctrineMessage implements TenantInterface, TransactionInterface {
 
     public function getResults() {
         return $this->results;
-    }
-
-    public function setId($id) {
-        $this->id = $id;
     }
 
     public function setCreated(\DateTime $created) {
