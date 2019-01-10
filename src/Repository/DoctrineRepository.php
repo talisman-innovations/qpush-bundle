@@ -16,8 +16,7 @@ class DoctrineRepository extends TenantAwareBaseRepository {
     const DEFAULT_PERIOD = 300;
 
     public function __construct(EntityManagerInterface $em, TenantManager $tenantManager) {
-        parent::__construct($em, $tenantManager);
-        $this->repository = $em->getRepository(DoctrineMessage::class);
+        parent::__construct($em, DoctrineMessage::class, $tenantManager);
     }
 
     /**

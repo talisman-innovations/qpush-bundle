@@ -17,8 +17,7 @@ class DoctrineResultRepository extends TenantAwareBaseRepository {
     const DEFAULT_PERIOD = 300;
 
     public function __construct(EntityManagerInterface $em, TenantManager $tenantManager) {
-        parent::__construct($em, $tenantManager);
-        $this->repository = $em->getRepository(DoctrineMessageResult::class);
+        parent::__construct($em, DoctrineMessageResult::class, $tenantManager);
     }
 
     public function paginate($data = []) {
