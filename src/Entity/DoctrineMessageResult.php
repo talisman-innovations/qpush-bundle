@@ -28,7 +28,7 @@ use Talisman\TideBundle\Interfaces\TenantInterface;
 use Talisman\TideBundle\Interfaces\TransactionInterface;
 use Talisman\TideBundle\Traits\TenantTrait;
 use Talisman\TideBundle\Traits\TransactionTrait;
-use Talisman\TideBundle\Traits\Id64Trait;
+use Talisman\TideBundle\Traits\IdTrait;
 
 /**
  * 
@@ -40,7 +40,7 @@ class DoctrineMessageResult implements TenantInterface, TransactionInterface {
 
     use TenantTrait;
     use TransactionTrait;
-    use Id64Trait;
+    use IdTrait;
 
     /**
      * @var \DateTime $created
