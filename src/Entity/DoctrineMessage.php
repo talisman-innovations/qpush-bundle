@@ -34,7 +34,7 @@ use Talisman\TideBundle\Traits\IdTrait;
 /**
  * @ORM\Entity
  * @ORM\Table(name="uecode_qpush_message",
- * options={"collate":"	utf8mb4_unicode_ci", "charset":"utf8mb4"},
+ * options={"collate":"	utf8mb4_unicode_ci", "charset":"utf8mb4", "row_format":"COMPRESSED"},
  * indexes={@ORM\Index(name="uecode_qpush__tenant_queue_created_idx",columns={"tenant_id","queue","created"}),
  *          @ORM\Index(name="uecode_qpush_delivered_idx",columns={"delivered"}),
  *          @ORM\Index(name="uecode_qpush_message_idx",columns={"message"}, flags={"fulltext"}),
