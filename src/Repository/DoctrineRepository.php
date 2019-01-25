@@ -8,7 +8,6 @@ namespace Uecode\Bundle\QPushBundle\Repository;
 
 use Doctrine\ORM\EntityManagerInterface;
 use Talisman\TideBundle\Service\TenantManager;
-use Talisman\TideBundle\Repository\TenantAwareBaseRepository;
 use Uecode\Bundle\QPushBundle\Entity\DoctrineMessage;
 
 class DoctrineRepository extends TenantAwareBaseRepository {
